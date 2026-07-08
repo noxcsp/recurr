@@ -3,6 +3,7 @@ import { Geist_Mono, DM_Sans, Merriweather } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
+import { Metadata } from "next";
 
 const merriweatherHeading = Merriweather({subsets:['latin'],variable:'--font-heading'});
 
@@ -12,6 +13,11 @@ const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+export const metadata: Metadata = {
+  title: 'Recurr',
+  description: "A simple subscription tracker",
+}
 
 export default function RootLayout({
   children,

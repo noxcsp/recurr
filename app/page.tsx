@@ -1,32 +1,37 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { login } from '@/app/auth/actions'
-
-interface ActionState {
-  error: string;
-}
-
-const initialState: ActionState = {
-  error: '',
-}
+import { loginSchema, type LoginInput } from '@/app/auth/schemas'
 
 export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(
-    async (prevState: ActionState, formData: FormData) => {
-      const result = await login(formData)
-      if (result?.error) {
-        return { error: result.error }
-      }
-      return prevState
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const form = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
     },
-    initialState
-  )
+  })
+
+  const onSubmit = (values: LoginInput) => {
+    setError(null)
+    startTransition(async () => {
+      const result = await login(values)
+      if (result?.error) {
+        setError(result.error)
+      }
+    })
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -37,51 +42,69 @@ export default function LoginPage() {
             Enter your email and password to sign in to your account.
           </CardDescription>
         </CardHeader>
-        <form action={formAction}>
-          <CardContent className="space-y-4">
-            {state?.error && (
-              <div className="text-destructive text-sm p-3">
-                {state.error}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <CardContent className="space-y-4">
+              {error && (
+                <div className="text-destructive text-sm p-3 bg-destructive/10 rounded-sm">
+                  {error}
+                </div>
+              )}
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                placeholder="m@example.com"
-                required
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="m@example.com"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Password</FormLabel>
+                      <Link
+                        href="/forgot-password"
+                        className="text-sm font-medium text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button className="w-full" type="submit" disabled={isPending}>
+                {isPending ? 'Signing in...' : 'Sign in'}
+              </Button>
+              <div className="text-sm text-center text-muted-foreground">
+                Don&apos;t have an account?{' '}
                 <Link
-                  href="/forgot-password"
-                  className="text-sm font-medium text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                  href="/signup"
+                  className="text-primary hover:underline underline-offset-4"
                 >
-                  Forgot password?
+                  Sign up
                 </Link>
               </div>
-              <Input id="password" name="password" type="password" required />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button className="w-full" type="submit" disabled={pending}>
-              {pending ? 'Signing in...' : 'Sign in'}
-            </Button>
-            <div className="text-sm text-center text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/signup"
-                className="text-primary hover:underline underline-offset-4"
-              >
-                Sign up
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
+            </CardFooter>
+          </form>
+        </Form>
       </Card>
     </div>
   )

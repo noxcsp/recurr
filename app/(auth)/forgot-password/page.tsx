@@ -1,40 +1,41 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { resetPassword } from '@/app/auth/actions'
+import { resetPasswordSchema, type ResetPasswordInput } from '@/app/auth/schemas'
 import { cn } from '@/lib/utils'
 
-interface ActionState {
-  error: string;
-  success: boolean;
-  message: string;
-}
-
-const initialState: ActionState = {
-  error: '',
-  success: false,
-  message: '',
-}
-
 export default function ForgotPasswordPage() {
-  const [state, formAction, pending] = useActionState(
-    async (prevState: ActionState, formData: FormData) => {
-      const result = await resetPassword(formData)
-      if (result?.error) {
-        return { error: result.error, success: false, message: '' }
-      }
-      if (result?.success) {
-        return { error: '', success: true, message: result.message }
-      }
-      return prevState
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const form = useForm<ResetPasswordInput>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      email: '',
     },
-    initialState
-  )
+  })
+
+  const onSubmit = (values: ResetPasswordInput) => {
+    setError(null)
+    setSuccessMessage(null)
+    startTransition(async () => {
+      const result = await resetPassword(values)
+      if (result?.error) {
+        setError(result.error)
+      } else if (result?.success) {
+        setSuccessMessage(result.message)
+      }
+    })
+  }
 
   return (
     <Card className="w-full max-w-md">
@@ -44,10 +45,10 @@ export default function ForgotPasswordPage() {
           Enter your email address and we will send you a verification code.
         </CardDescription>
       </CardHeader>
-      {state?.success ? (
+      {successMessage ? (
         <CardContent className="space-y-4">
           <div className="text-primary text-sm p-4 text-center">
-            {state.message}
+            {successMessage}
           </div>
           <Link
             href="/"
@@ -57,39 +58,48 @@ export default function ForgotPasswordPage() {
           </Link>
         </CardContent>
       ) : (
-        <form action={formAction}>
-          <CardContent className="space-y-4">
-            {state?.error && (
-              <div className="text-destructive text-sm p-3">
-                {state.error}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <CardContent className="space-y-4">
+              {error && (
+                <div className="text-destructive text-sm p-3 bg-destructive/10 rounded-sm">
+                  {error}
+                </div>
+              )}
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                placeholder="m@example.com"
-                required
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="m@example.com"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button className="w-full" type="submit" disabled={pending}>
-              {pending ? 'Sending reset link...' : 'Send reset link'}
-            </Button>
-            <div className="text-sm text-center text-muted-foreground">
-              Remember your password?{' '}
-              <Link
-                href="/"
-                className="text-primary hover:underline underline-offset-4"
-              >
-                Sign in
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button className="w-full" type="submit" disabled={isPending}>
+                {isPending ? 'Sending reset link...' : 'Send reset link'}
+              </Button>
+              <div className="text-sm text-center text-muted-foreground">
+                Remember your password?{' '}
+                <Link
+                  href="/"
+                  className="text-primary hover:underline underline-offset-4"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Form>
       )}
     </Card>
   )
