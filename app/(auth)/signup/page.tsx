@@ -2,26 +2,34 @@
 
 import { useActionState } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { login } from '@/app/auth/actions'
+import { signup } from '@/app/auth/actions'
+import { cn } from '@/lib/utils'
 
 interface ActionState {
   error: string;
+  success: boolean;
+  message: string;
 }
 
 const initialState: ActionState = {
   error: '',
+  success: false,
+  message: '',
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [state, formAction, pending] = useActionState(
     async (prevState: ActionState, formData: FormData) => {
-      const result = await login(formData)
+      const result = await signup(formData)
       if (result?.error) {
-        return { error: result.error }
+        return { error: result.error, success: false, message: '' }
+      }
+      if (result?.success) {
+        return { error: '', success: true, message: result.message }
       }
       return prevState
     },
@@ -29,14 +37,26 @@ export default function LoginPage() {
   )
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Login</CardTitle>
-          <CardDescription>
-            Enter your email and password to sign in to your account.
-          </CardDescription>
-        </CardHeader>
+    <Card className="w-full max-w-md">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+        <CardDescription>
+          Enter your email below to create your account.
+        </CardDescription>
+      </CardHeader>
+      {state?.success ? (
+        <CardContent className="space-y-4">
+          <div className="text-primary text-sm p-4 text-center">
+            {state.message}
+          </div>
+          <Link
+            href="/"
+            className={cn(buttonVariants({ variant: 'default' }), 'w-full text-center')}
+          >
+            Return to Login
+          </Link>
+        </CardContent>
+      ) : (
         <form action={formAction}>
           <CardContent className="space-y-4">
             {state?.error && (
@@ -55,34 +75,26 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm font-medium text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button className="w-full" type="submit" disabled={pending}>
-              {pending ? 'Signing in...' : 'Sign in'}
+              {pending ? 'Creating account...' : 'Create account'}
             </Button>
             <div className="text-sm text-center text-muted-foreground">
-              Don&apos;t have an account?{' '}
+              Already have an account?{' '}
               <Link
-                href="/signup"
+                href="/"
                 className="text-primary hover:underline underline-offset-4"
               >
-                Sign up
+                Sign in
               </Link>
             </div>
           </CardFooter>
         </form>
-      </Card>
-    </div>
+      )}
+    </Card>
   )
 }
