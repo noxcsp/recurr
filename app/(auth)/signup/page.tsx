@@ -33,7 +33,7 @@ export default function SignupPage() {
       if (result?.error) {
         setError(result.error)
       } else if (result?.success) {
-        setSuccessMessage(result.message)
+        setSuccessMessage(result.message ?? null)
       }
     })
   }
@@ -63,7 +63,7 @@ export default function SignupPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <CardContent className="space-y-4">
               {error && (
-                <div className="text-destructive text-sm p-3 bg-destructive/10 rounded-sm">
+                <div className="text-destructive text-sm p-3">
                   {error}
                 </div>
               )}

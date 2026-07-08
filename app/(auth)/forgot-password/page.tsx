@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <CardContent className="space-y-4">
               {error && (
-                <div className="text-destructive text-sm p-3 bg-destructive/10 rounded-sm">
+                <div className="text-destructive text-sm p-3">
                   {error}
                 </div>
               )}
