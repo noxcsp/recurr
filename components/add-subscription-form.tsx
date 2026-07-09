@@ -35,14 +35,14 @@ import { Plus, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { addSubscription } from "@/app/home/actions"
-import { subscriptionSchema, type SubscriptionInput } from "@/app/home/schemas"
+import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 
 export function AddSubscriptionForm() {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const form = useForm<SubscriptionInput>({
+  const form = useForm<SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
       service_name: "",
@@ -55,7 +55,7 @@ export function AddSubscriptionForm() {
     },
   })
 
-  const onSubmit = (values: SubscriptionInput) => {
+  const onSubmit = (values: SubscriptionFormValues) => {
     setError(null)
     startTransition(async () => {
       const result = await addSubscription(values)

@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
-import { subscriptionSchema, type SubscriptionInput } from "@/app/home/schemas"
+import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 
-export async function addSubscription(data: SubscriptionInput) {
+export async function addSubscription(data: SubscriptionFormValues) {
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
@@ -41,7 +41,7 @@ export async function addSubscription(data: SubscriptionInput) {
 
 export async function updateSubscription(
   id: string,
-  data: SubscriptionInput
+  data: SubscriptionFormValues
 ) {
   const supabase = await createClient()
 

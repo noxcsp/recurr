@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { loginSchema, signupSchema, resetPasswordSchema, type LoginInput, type SignupInput, type ResetPasswordInput } from '@/app/auth/schemas'
+import { loginSchema, signupSchema, resetPasswordSchema, type LoginFormValues, type SignupFormValues, type ResetPasswordFormValues } from '@/lib/validations/auth'
 
-export async function login(data: LoginInput) {
+export async function login(data: LoginFormValues) {
   const supabase = await createClient()
 
   const validated = loginSchema.safeParse(data)
@@ -23,7 +23,7 @@ export async function login(data: LoginInput) {
   redirect('/home')
 }
 
-export async function signup(data: SignupInput): Promise<{ error?: string; success?: boolean; message?: string } | void> {
+export async function signup(data: SignupFormValues): Promise<{ error?: string; success?: boolean; message?: string } | void> {
   const supabase = await createClient()
 
   const validated = signupSchema.safeParse(data)
@@ -51,7 +51,7 @@ export async function signup(data: SignupInput): Promise<{ error?: string; succe
   redirect('/')
 }
 
-export async function resetPassword(data: ResetPasswordInput) {
+export async function resetPassword(data: ResetPasswordFormValues) {
   const supabase = await createClient()
 
   const validated = resetPasswordSchema.safeParse(data)
