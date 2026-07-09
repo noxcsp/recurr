@@ -69,7 +69,7 @@ export default async function HomePage() {
                 </div>
               </div>
             ) : (
-              <div className="text-sm text-destructive p-3">
+              <div className="border border-destructive text-destructive text-xs p-3 font-medium">
                 Profile not found in database.
               </div>
             )}
