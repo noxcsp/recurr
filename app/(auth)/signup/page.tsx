@@ -33,7 +33,7 @@ export default function SignupPage() {
       if (result?.error) {
         setError(result.error)
       } else if (result?.success) {
-        setSuccessMessage(result.message)
+        setSuccessMessage(result.message ?? null)
       }
     })
   }
@@ -48,7 +48,7 @@ export default function SignupPage() {
       </CardHeader>
       {successMessage ? (
         <CardContent className="space-y-4">
-          <div className="text-primary text-sm p-4 text-center">
+          <div className="border border-primary text-primary text-xs p-4 text-center font-medium">
             {successMessage}
           </div>
           <Link
@@ -63,7 +63,7 @@ export default function SignupPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <CardContent className="space-y-4">
               {error && (
-                <div className="text-destructive text-sm p-3 bg-destructive/10 rounded-sm">
+                <div className="border border-destructive text-destructive text-xs p-3 font-medium">
                   {error}
                 </div>
               )}

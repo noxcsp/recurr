@@ -23,7 +23,7 @@ export async function login(data: LoginInput) {
   redirect('/home')
 }
 
-export async function signup(data: SignupInput) {
+export async function signup(data: SignupInput): Promise<{ error?: string; success?: boolean; message?: string } | void> {
   const supabase = await createClient()
 
   const validated = signupSchema.safeParse(data)
@@ -31,14 +31,24 @@ export async function signup(data: SignupInput) {
     return { error: 'Invalid input fields' }
   }
 
-  const { error } = await supabase.auth.signUp(validated.data)
+  const { error } = await supabase.auth.signUp({
+    email: validated.data.email,
+    password: validated.data.password,
+    options: {
+      data: {
+        timezone: 'Asia/Manila',
+      },
+    },
+  })
 
   if (error) {
     return { error: error.message }
   }
 
   revalidatePath('/', 'layout')
-  return { success: true, message: 'Check your email to confirm your account.' }
+  // Commented out email confirmation for the meantime
+  // return { success: true, message: 'Check your email to confirm your account.' }
+  redirect('/')
 }
 
 export async function resetPassword(data: ResetPasswordInput) {
@@ -55,7 +65,7 @@ export async function resetPassword(data: ResetPasswordInput) {
     return { error: error.message }
   }
 
-  return { success: true, message: 'Check your email for the reset link.' }
+  return { success: true, message: 'Check your email for the password reset link.' }
 }
 
 export async function signout() {
