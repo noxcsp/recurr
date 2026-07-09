@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,63 +26,88 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Plus, X } from "lucide-react"
-import { toast } from "sonner"
+import { Trash2 } from "lucide-react"
 
-import { addSubscription } from "@/app/home/actions"
+import { updateSubscription, deleteSubscription } from "@/app/home/actions"
 import { subscriptionSchema, type SubscriptionInput } from "@/app/home/schemas"
+import { Subscription } from "@/types/subscriptions"
 
-export function AddSubscriptionForm() {
-  const [open, setOpen] = useState(false)
+interface EditSubscriptionFormProps {
+  subscription: Subscription
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function EditSubscriptionForm({
+  subscription,
+  open,
+  onOpenChange,
+}: EditSubscriptionFormProps) {
   const [error, setError] = useState<string | null>(null)
+  const [deletePopoverOpen, setDeletePopoverOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isDeleting, startDeleteTransition] = useTransition()
 
   const form = useForm<SubscriptionInput>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
-      service_name: "",
-      cost: 0,
-      plan_type: "Monthly",
-      payment_mode: "",
-      next_due_date: undefined,
-      is_trial: false,
-      trial_end_date: undefined,
+      service_name: subscription.service_name,
+      cost: subscription.cost,
+      plan_type: subscription.plan_type,
+      payment_mode: subscription.payment_mode,
+      next_due_date: new Date(subscription.next_due_date),
+      is_trial: subscription.is_trial,
+      trial_end_date: subscription.trial_end_date
+        ? new Date(subscription.trial_end_date)
+        : undefined,
     },
   })
 
   const onSubmit = (values: SubscriptionInput) => {
     setError(null)
     startTransition(async () => {
-      const result = await addSubscription(values)
+      const result = await updateSubscription(subscription.id, values)
       if (result?.error) {
         setError(result.error)
       } else if (result?.success) {
-        form.reset()
-        setOpen(false)
-        toast.success("Subscription added", {
+        onOpenChange(false)
+        toast.success("Subscription updated", {
           position: "top-right",
-          description: `${values.service_name} has been added to your subscriptions.`,
+          description: `${values.service_name} has been saved.`,
+        })
+      }
+    })
+  }
+
+  const onDelete = () => {
+    setError(null)
+    startDeleteTransition(async () => {
+      const result = await deleteSubscription(subscription.id)
+      if (result?.error) {
+        setError(result.error)
+        setDeletePopoverOpen(false)
+      } else if (result?.success) {
+        setDeletePopoverOpen(false)
+        onOpenChange(false)
+        toast.success("Subscription deleted", {
+          position: "top-right",
+          description: `${subscription.service_name} has been removed.`,
         })
       }
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button variant="outline" size="icon">
-            <Plus className="size-4" />
-            <span className="sr-only">Add subscription</span>
-          </Button>
-        }
-      />
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="max-w-md bg-transparent p-0 shadow-none ring-0"
@@ -89,23 +115,69 @@ export function AddSubscriptionForm() {
         <Card className="w-full">
           <CardHeader className="relative space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight">
-              Add Subscription
+              Edit Subscription
             </CardTitle>
             <CardDescription>
-              Enter the details of your new subscription.
+              Update the details for{" "}
+              <span className="font-medium text-foreground">
+                {subscription.service_name}
+              </span>
+              .
             </CardDescription>
-            <DialogClose
-              render={
-                <Button
-                  variant="ghost"
-                  className="absolute top-0 right-4 rounded-none"
-                  size="icon-sm"
-                />
-              }
-            >
-              <X className="size-4" />
-              <span className="sr-only">Close</span>
-            </DialogClose>
+
+            {/* Delete button with popover confirmation */}
+            <Popover open={deletePopoverOpen} onOpenChange={setDeletePopoverOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="absolute top-0 right-4 rounded-none text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    size="icon-sm"
+                    disabled={isDeleting || isPending}
+                  />
+                }
+              >
+                <Trash2 className="size-4" />
+                <span className="sr-only">Delete subscription</span>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="end" className="w-64 p-4">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Delete subscription?</p>
+                    <p className="text-xs text-muted-foreground">
+                      This will permanently remove{" "}
+                      <span className="font-medium text-foreground">
+                        {subscription.service_name}
+                      </span>
+                      . This action cannot be undone.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 rounded-none"
+                      onClick={() => setDeletePopoverOpen(false)}
+                      disabled={isDeleting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1 rounded-none"
+                      onClick={onDelete}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? "Deleting..." : "Delete"}
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </CardHeader>
           <Form {...form}>
             <form
@@ -255,9 +327,22 @@ export function AddSubscriptionForm() {
                   />
                 )}
               </CardContent>
-              <CardFooter className="flex flex-col space-y-4">
-                <Button className="w-full" type="submit" disabled={isPending}>
-                  {isPending ? "Adding..." : "Add Subscription"}
+              <CardFooter className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 rounded-none"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isPending || isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  type="submit"
+                  disabled={isPending || isDeleting}
+                >
+                  {isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </CardFooter>
             </form>
