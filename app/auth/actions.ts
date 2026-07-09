@@ -59,16 +59,13 @@ export async function resetPassword(data: ResetPasswordInput) {
     return { error: 'Invalid input fields' }
   }
 
-  // Commented out reset password email confirmation/link for the meantime
-  /*
   const { error } = await supabase.auth.resetPasswordForEmail(validated.data.email)
 
   if (error) {
     return { error: error.message }
   }
-  */
 
-  return { success: true, message: 'Password reset link bypassed (email confirmation commented out).' }
+  return { success: true, message: 'Check your email for the password reset link.' }
 }
 
 export async function signout() {
