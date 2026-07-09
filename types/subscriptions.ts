@@ -7,6 +7,7 @@ export interface Subscription {
   payment_mode: string
   next_due_date: string
   is_trial: boolean
+  trial_end_date?: string | null
   created_at: string
   updated_at: string
 }

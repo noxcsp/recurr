@@ -26,6 +26,9 @@ export async function addSubscription(data: SubscriptionInput) {
     payment_mode: validated.data.payment_mode,
     next_due_date: validated.data.next_due_date.toISOString(),
     is_trial: validated.data.is_trial,
+    trial_end_date: validated.data.is_trial && validated.data.trial_end_date
+      ? validated.data.trial_end_date.toISOString()
+      : null,
   })
 
   if (error) {

@@ -50,6 +50,7 @@ export function AddSubscriptionForm() {
       payment_mode: "",
       next_due_date: undefined,
       is_trial: false,
+      trial_end_date: undefined,
     },
   })
 
@@ -215,7 +216,12 @@ export function AddSubscriptionForm() {
                       <FormControl>
                         <Checkbox
                           checked={field.value}
-                          onCheckedChange={(checked) => field.onChange(checked)}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked)
+                            if (!checked) {
+                              form.setValue("trial_end_date", undefined)
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormLabel className="font-normal">
@@ -225,6 +231,24 @@ export function AddSubscriptionForm() {
                     </FormItem>
                   )}
                 />
+                {form.watch("is_trial") && (
+                  <FormField
+                    control={form.control}
+                    name="trial_end_date"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Trial End Date</FormLabel>
+                        <FormControl>
+                          <DatePicker
+                            value={field.value ?? undefined}
+                            onChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
                 <Button className="w-full" type="submit" disabled={isPending}>
