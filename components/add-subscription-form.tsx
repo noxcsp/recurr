@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
@@ -37,8 +37,23 @@ import { toast } from "sonner"
 import { addSubscription } from "@/app/home/actions"
 import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 
-export function AddSubscriptionForm() {
-  const [open, setOpen] = useState(false)
+interface AddSubscriptionFormProps {
+  defaultDate?: Date
+  externalOpen?: boolean
+  onExternalOpenChange?: (open: boolean) => void
+}
+
+export function AddSubscriptionForm({
+  defaultDate,
+  externalOpen,
+  onExternalOpenChange,
+}: AddSubscriptionFormProps = {}) {
+  const isControlled = externalOpen !== undefined
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = isControlled ? externalOpen : internalOpen
+  const setOpen = isControlled
+    ? (v: boolean) => onExternalOpenChange?.(v)
+    : setInternalOpen
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -49,11 +64,17 @@ export function AddSubscriptionForm() {
       cost: 0,
       plan_type: "Monthly",
       payment_mode: "",
-      next_due_date: undefined,
+      next_due_date: defaultDate,
       is_trial: false,
       trial_end_date: undefined,
     },
   })
+
+  useEffect(() => {
+    if (defaultDate) {
+      form.setValue("next_due_date", defaultDate)
+    }
+  }, [defaultDate, form])
 
   const onSubmit = (values: SubscriptionFormValues) => {
     setError(null)
@@ -74,14 +95,16 @@ export function AddSubscriptionForm() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button variant="outline" size="icon">
-            <Plus className="size-4" />
-            <span className="sr-only">Add subscription</span>
-          </Button>
-        }
-      />
+      {!isControlled && (
+        <DialogTrigger
+          render={
+            <Button variant="outline" size="icon">
+              <Plus className="size-4" />
+              <span className="sr-only">Add subscription</span>
+            </Button>
+          }
+        />
+      )}
       <DialogContent
         showCloseButton={false}
         className="max-w-md bg-transparent p-0 shadow-none ring-0"
