@@ -69,6 +69,7 @@ export function EditSubscriptionForm({
       trial_end_date: subscription.trial_end_date
         ? new Date(subscription.trial_end_date)
         : undefined,
+      subscription_status: subscription.subscription_status,
     },
   })
 
@@ -246,6 +247,27 @@ export function EditSubscriptionForm({
                             <TabsTrigger value="Weekly">Weekly</TabsTrigger>
                             <TabsTrigger value="Monthly">Monthly</TabsTrigger>
                             <TabsTrigger value="Annual">Annual</TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="subscription_status"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>Status</FormLabel>
+                      <FormControl>
+                        <Tabs
+                          value={field.value}
+                          onValueChange={(value) => field.onChange(value)}
+                        >
+                          <TabsList variant="line" className="w-full">
+                            <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
+                            <TabsTrigger value="paid">Paid</TabsTrigger>
                           </TabsList>
                         </Tabs>
                       </FormControl>

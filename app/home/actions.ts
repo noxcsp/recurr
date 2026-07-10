@@ -29,6 +29,7 @@ export async function addSubscription(data: SubscriptionFormValues) {
     trial_end_date: validated.data.is_trial && validated.data.trial_end_date
       ? validated.data.trial_end_date.toISOString()
       : null,
+    subscription_status: validated.data.subscription_status,
   })
 
   if (error) {
@@ -69,6 +70,7 @@ export async function updateSubscription(
         validated.data.is_trial && validated.data.trial_end_date
           ? validated.data.trial_end_date.toISOString()
           : null,
+      subscription_status: validated.data.subscription_status,
     })
     .eq("id", id)
     .eq("user_id", userData.user.id)

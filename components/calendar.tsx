@@ -179,6 +179,7 @@ export function SubscriptionCalendar({
           trial_end_date: sub.trial_end_date
             ? new Date(sub.trial_end_date)
             : undefined,
+          subscription_status: sub.subscription_status,
         })
         if (result?.error) {
           toast.error("Failed to reschedule", {

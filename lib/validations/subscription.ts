@@ -9,6 +9,7 @@ export const subscriptionSchema = z
     next_due_date: z.date({ error: "Please select a due date." }),
     is_trial: z.boolean(),
     trial_end_date: z.date().optional().nullable(),
+    subscription_status: z.enum(["unpaid", "paid", "overdue"]),
   })
   .refine(
     (data) => {
