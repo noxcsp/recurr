@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { signup } from '@/app/auth/actions'
-import { signupSchema, type SignupInput } from '@/app/auth/schemas'
+import { signupSchema, type SignupFormValues } from '@/lib/validations/auth'
 import { cn } from '@/lib/utils'
 
 export default function SignupPage() {
@@ -17,7 +17,7 @@ export default function SignupPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const form = useForm<SignupInput>({
+  const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       email: '',
@@ -25,7 +25,7 @@ export default function SignupPage() {
     },
   })
 
-  const onSubmit = (values: SignupInput) => {
+  const onSubmit = (values: SignupFormValues) => {
     setError(null)
     setSuccessMessage(null)
     startTransition(async () => {

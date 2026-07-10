@@ -38,7 +38,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Trash2 } from "lucide-react"
 
 import { updateSubscription, deleteSubscription } from "@/app/home/actions"
-import { subscriptionSchema, type SubscriptionInput } from "@/app/home/schemas"
+import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 import { Subscription } from "@/types/subscriptions"
 
 interface EditSubscriptionFormProps {
@@ -57,7 +57,7 @@ export function EditSubscriptionForm({
   const [isPending, startTransition] = useTransition()
   const [isDeleting, startDeleteTransition] = useTransition()
 
-  const form = useForm<SubscriptionInput>({
+  const form = useForm<SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
       service_name: subscription.service_name,
@@ -72,7 +72,7 @@ export function EditSubscriptionForm({
     },
   })
 
-  const onSubmit = (values: SubscriptionInput) => {
+  const onSubmit = (values: SubscriptionFormValues) => {
     setError(null)
     startTransition(async () => {
       const result = await updateSubscription(subscription.id, values)

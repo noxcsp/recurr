@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { resetPassword } from '@/app/auth/actions'
-import { resetPasswordSchema, type ResetPasswordInput } from '@/app/auth/schemas'
+import { resetPasswordSchema, type ResetPasswordFormValues } from '@/lib/validations/auth'
 import { cn } from '@/lib/utils'
 
 export default function ForgotPasswordPage() {
@@ -17,14 +17,14 @@ export default function ForgotPasswordPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const form = useForm<ResetPasswordInput>({
+  const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
       email: '',
     },
   })
 
-  const onSubmit = (values: ResetPasswordInput) => {
+  const onSubmit = (values: ResetPasswordFormValues) => {
     setError(null)
     setSuccessMessage(null)
     startTransition(async () => {
