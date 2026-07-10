@@ -191,7 +191,7 @@ export function AddSubscriptionForm({
                       <FormLabel>Plan Type</FormLabel>
                       <FormControl>
                         <Tabs
-                          value={field.value}
+                          value={field.value ?? "Monthly"}
                           onValueChange={(value) => field.onChange(value)}
                         >
                           <TabsList variant="line" className="w-full">
@@ -213,7 +213,7 @@ export function AddSubscriptionForm({
                       <FormLabel>Status</FormLabel>
                       <FormControl>
                         <Tabs
-                          value={field.value}
+                          value={field.value ?? "unpaid"}
                           onValueChange={(value) => field.onChange(value)}
                         >
                           <TabsList variant="line" className="w-full">
