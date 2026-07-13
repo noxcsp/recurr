@@ -9,13 +9,13 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { login } from '@/app/auth/actions'
-import { loginSchema, type LoginInput } from '@/app/auth/schemas'
+import { loginSchema, type LoginFormValues } from '@/lib/validations/auth'
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const form = useForm<LoginInput>({
+  const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
@@ -23,7 +23,7 @@ export default function LoginPage() {
     },
   })
 
-  const onSubmit = (values: LoginInput) => {
+  const onSubmit = (values: LoginFormValues) => {
     setError(null)
     startTransition(async () => {
       const result = await login(values)

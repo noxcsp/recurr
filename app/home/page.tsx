@@ -1,10 +1,9 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Profile } from '@/types/profiles'
-
-import { signout } from '@/app/auth/actions'
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { Profile } from "@/types/profiles"
+import { Subscription } from "@/types/subscriptions"
+import { Sidebar } from "@/components/sidebar"
+import { SubscriptionCalendar } from "@/components/calendar"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -12,77 +11,33 @@ export default async function HomePage() {
   const { data: userData, error } = await supabase.auth.getUser()
 
   if (error || !userData?.user) {
-    redirect('/')
+    redirect("/")
   }
 
   const user = userData.user
 
-  const { data } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
     .single()
 
-  const profile = data as Profile | null
+  const profile = profileData as Profile | null
+
+  const { data: subscriptionsData } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+
+  const subscriptions = (subscriptionsData ?? []) as Subscription[]
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Welcome!</CardTitle>
-          <CardDescription>
-            You have successfully logged in. Here are your account and profile details.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Details</h3>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="font-semibold text-muted-foreground">User ID:</div>
-              <div className="col-span-2 font-mono truncate" title={user.id}>{user.id}</div>
-              
-              <div className="font-semibold text-muted-foreground">Email:</div>
-              <div className="col-span-2 truncate" title={user.email}>{user.email}</div>
-              
-              <div className="font-semibold text-muted-foreground">Last Sign In:</div>
-              <div className="col-span-2">
-                {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'N/A'}
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-4 space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Profile Details</h3>
-            {profile ? (
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-semibold text-muted-foreground">Timezone:</div>
-                <div className="col-span-2">{profile.timezone}</div>
-                
-                <div className="font-semibold text-muted-foreground">FCM Token:</div>
-                <div className="col-span-2 font-mono truncate text-xs" title={profile.fcm_token || 'Not set'}>
-                  {profile.fcm_token || 'Not set'}
-                </div>
-                
-                <div className="font-semibold text-muted-foreground">Updated At:</div>
-                <div className="col-span-2">
-                  {profile.updated_at ? new Date(profile.updated_at).toLocaleString() : 'N/A'}
-                </div>
-              </div>
-            ) : (
-              <div className="border border-destructive text-destructive text-xs p-3 font-medium">
-                Profile not found in database.
-              </div>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter>
-          <form action={signout} className="w-full">
-            <Button variant="outline" className="w-full" type="submit">
-              Sign out
-            </Button>
-          </form>
-        </CardFooter>
-      </Card>
+    <div className="flex h-screen overflow-hidden bg-background">
+      <Sidebar user={user} profile={profile} subscriptions={subscriptions} />
+      <main className="flex-1 overflow-hidden p-4">
+        <SubscriptionCalendar subscriptions={subscriptions} />
+      </main>
     </div>
   )
 }

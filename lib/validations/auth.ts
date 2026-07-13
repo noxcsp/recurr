@@ -14,6 +14,6 @@ export const resetPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
 })
 
-export type LoginInput = z.infer<typeof loginSchema>
-export type SignupInput = z.infer<typeof signupSchema>
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
+export type LoginFormValues = z.infer<typeof loginSchema>
+export type SignupFormValues = z.infer<typeof signupSchema>
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
