@@ -14,9 +14,8 @@ import { signout } from "@/app/auth/actions"
 import { LogOut } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 
 interface SidebarProps {
   user: User
@@ -27,39 +26,6 @@ interface SidebarProps {
 export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
   const router = useRouter()
   const { requestAndSaveToken } = usePushNotifications()
-  const [isSending, setIsSending] = useState(false)
-
-  const handleTestNotification = async () => {
-    if (!profile?.fcm_token) {
-      toast.error("FCM Token not found")
-      return
-    }
-
-    setIsSending(true)
-    try {
-      const res = await fetch("/api/send-notification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token: profile.fcm_token,
-          title: "Test Notification",
-          body: "This is a test notification triggered from the sidebar.",
-        }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        toast.success("Notification sent successfully!", {position: "top-right"})
-      } else {
-        toast.error(data.error || "Failed to send notification", {position: "top-right"})
-      }
-    } catch (error) {
-      toast.error("An error occurred while sending the notification", {position: "top-right"})
-    } finally {
-      setIsSending(false)
-    }
-  }
 
   useEffect(() => {
     const initNotifications = async () => {
@@ -175,14 +141,6 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
 
       {/* Action buttons */}
       <div className="shrink-0 space-y-2 border-t p-4">
-        <Button 
-          variant="secondary" 
-          className="w-full" 
-          onClick={handleTestNotification}
-          disabled={isSending || !profile?.fcm_token}
-        >
-          {isSending ? "Sending..." : "Test Notification"}
-        </Button>
         <form action={signout} className="w-full">
           <Button variant="outline" className="w-full" type="submit">
             <LogOut className="mr-2 size-4" />
