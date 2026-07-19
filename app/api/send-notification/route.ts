@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
-import fs from 'fs';
-import path from 'path';
 
 if (!getApps().length) {
   try {
-    const keyPath = path.join(process.cwd(), 'service_key.json');
-    const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
     initializeApp({
-      credential: cert(serviceAccount),
+      credential: cert({
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
     });
   } catch (error) {
     console.error('Failed to initialize Firebase Admin:', error);
