@@ -1,8 +1,6 @@
 "use client"
 
 import {
-  Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -15,6 +13,9 @@ import { SubscriptionList } from "@/components/subscription-list"
 import { signout } from "@/app/auth/actions"
 import { LogOut } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
+import { usePushNotifications } from "@/hooks/usePushNotifications"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 interface SidebarProps {
   user: User
@@ -23,6 +24,20 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
+  const router = useRouter()
+  const { requestAndSaveToken } = usePushNotifications()
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      const updated = await requestAndSaveToken()
+      if (updated) {
+        router.refresh()
+      }
+    }
+    initNotifications()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <aside className="flex h-screen w-1/5 flex-col border-r bg-card">
       {/* Header — account & profile details */}
@@ -124,8 +139,8 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
         </div>
       </div>
 
-      {/* Sign out button */}
-      <div className="shrink-0 border-t p-4">
+      {/* Action buttons */}
+      <div className="shrink-0 space-y-2 border-t p-4">
         <form action={signout} className="w-full">
           <Button variant="outline" className="w-full" type="submit">
             <LogOut className="mr-2 size-4" />
