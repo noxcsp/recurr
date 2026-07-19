@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from "react";
 import { getToken } from "firebase/messaging";
 import { messaging } from "@/lib/firebase";
 import { createClient } from "@/lib/supabase/client";
@@ -7,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 export const usePushNotifications = () => {
   const supabase = createClient();
 
-  const requestAndSaveToken = async (): Promise<boolean> => {
+  const requestAndSaveToken = useCallback(async (): Promise<boolean> => {
     try {
       if (!('Notification' in window)) {
         console.warn('This browser does not support desktop notifications');
@@ -38,6 +39,23 @@ export const usePushNotifications = () => {
           `/firebase-messaging-sw.js?${queryParams.toString()}`,
           { scope: '/firebase-cloud-messaging-push-scope' }
         );
+
+        // Wait for the service worker to become active
+        if (serviceWorkerRegistration && !serviceWorkerRegistration.active) {
+          await new Promise<void>((resolve) => {
+            const interval = setInterval(() => {
+              if (serviceWorkerRegistration?.active) {
+                clearInterval(interval);
+                resolve();
+              }
+            }, 50);
+            // Timeout after 4 seconds to prevent hanging
+            setTimeout(() => {
+              clearInterval(interval);
+              resolve();
+            }, 4000);
+          });
+        }
       }
 
       if (!process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY) {
@@ -57,12 +75,21 @@ export const usePushNotifications = () => {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
+          const cacheKey = `fcm_token_${user.id}`;
+          const cachedToken = localStorage.getItem(cacheKey);
+
+          if (cachedToken === currentToken) {
+            console.log('FCM token already cached and synced.');
+            return false; // No update occurred (already cached)
+          }
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('fcm_token')
             .eq('id', user.id)
             .single();
 
+          let updated = false;
           if (profile?.fcm_token !== currentToken) {
             const { error } = await supabase
               .from('profiles')
@@ -71,8 +98,11 @@ export const usePushNotifications = () => {
 
             if (error) throw error;
             console.log('FCM Token successfully saved to profile!');
-            return true;
+            updated = true;
           }
+          
+          localStorage.setItem(cacheKey, currentToken);
+          return updated; // Only returns true if the database was updated
         }
       } else {
         console.warn('No registration token available. Request permission to generate one.');
@@ -81,7 +111,7 @@ export const usePushNotifications = () => {
       console.error('An error occurred while retrieving token: ', error);
     }
     return false;
-  };
+  }, [supabase]);
 
   return { requestAndSaveToken };
 };

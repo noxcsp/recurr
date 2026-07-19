@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -21,6 +21,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "firebase": "^12.16.0",
+    "firebase-admin": "^14.2.0",
     "lucide-react": "^1.23.0",
     "moment": "^2.30.1",
     "next": "16.2.6",

@@ -21,8 +21,29 @@ messaging.onBackgroundMessage((payload) => {
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
         body: payload.notification.body,
-        icon: '/icon512_maskable.png'
+        icon: '',
+        data: payload.data || { link: '/home' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const clickAction = event.notification.data?.link || '/home';
+    
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then((windowClients) => {
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                // Check if the current client is matching the url
+                if (client.url.includes(clickAction) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(clickAction);
+            }
+        })
+    );
 });
