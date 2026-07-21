@@ -5,6 +5,7 @@ import { Subscription } from "@/types/subscriptions"
 import { Sidebar } from "@/components/sidebar"
 import { SubscriptionCalendar } from "@/components/calendar"
 import { BottomNav } from "@/components/bottom-nav"
+import { HomeClient } from "@/components/home-client"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -33,8 +34,15 @@ export default async function HomePage() {
 
   const subscriptions = (subscriptionsData ?? []) as Subscription[]
 
+  // Compute today's date string (YYYY-MM-DD) server-side for consistent comparison
+  const todayDateStr = new Date().toISOString().split("T")[0]
+
   return (
-    <>
+    <HomeClient
+      todayDateStr={todayDateStr}
+      lastSwipeoffDate={profile?.last_swipeoff_date ?? null}
+      subscriptions={subscriptions}
+    >
       {/* Mobile layout — bottom navbar (hidden on lg and above) */}
       <BottomNav user={user} profile={profile} subscriptions={subscriptions} />
 
@@ -45,6 +53,6 @@ export default async function HomePage() {
           <SubscriptionCalendar subscriptions={subscriptions} />
         </main>
       </div>
-    </>
+    </HomeClient>
   )
 }
