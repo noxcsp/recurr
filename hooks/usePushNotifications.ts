@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from "react";
-import { getToken } from "firebase/messaging";
+import { getToken, deleteToken } from "firebase/messaging";
 import { messaging } from "@/lib/firebase";
 import { createClient } from "@/lib/supabase/client";
 
@@ -113,5 +113,39 @@ export const usePushNotifications = () => {
     return false;
   }, [supabase]);
 
-  return { requestAndSaveToken };
+  const clearFcmToken = useCallback(async (): Promise<boolean> => {
+    try {
+      if (messaging) {
+        try {
+          await deleteToken(messaging);
+        } catch (err) {
+          console.warn('Error deleting Firebase messaging token:', err);
+        }
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ fcm_token: null })
+          .eq('id', user.id);
+
+        if (error) {
+          console.error('Error clearing FCM token from profile:', error);
+        }
+
+        const cacheKey = `fcm_token_${user.id}`;
+        localStorage.removeItem(cacheKey);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error clearing FCM token:', error);
+    }
+    return false;
+  }, [supabase]);
+
+  return { requestAndSaveToken, clearFcmToken };
 };

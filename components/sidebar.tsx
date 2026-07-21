@@ -11,11 +11,11 @@ import { Subscription } from "@/types/subscriptions"
 import { AddSubscriptionForm } from "@/components/add-subscription-form"
 import { SubscriptionList } from "@/components/subscription-list"
 import { signout } from "@/app/auth/actions"
-import { LogOut } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { LogOut, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
 
 interface SidebarProps {
   user: User
@@ -25,7 +25,8 @@ interface SidebarProps {
 
 export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
   const router = useRouter()
-  const { requestAndSaveToken } = usePushNotifications()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const { requestAndSaveToken, clearFcmToken } = usePushNotifications()
 
   useEffect(() => {
     const initNotifications = async () => {
@@ -37,6 +38,17 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
     initNotifications()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleSignOut = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSigningOut(true)
+    try {
+      await clearFcmToken()
+    } catch (error) {
+      console.error("Failed to clear FCM token on sign out:", error)
+    }
+    await signout()
+  }
 
   return (
     <aside className="flex h-screen w-1/5 flex-col border-r bg-card">
@@ -141,10 +153,19 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
 
       {/* Action buttons */}
       <div className="shrink-0 space-y-2 border-t p-4">
-        <form action={signout} className="w-full">
-          <Button variant="outline" className="w-full" type="submit">
-            <LogOut className="mr-2 size-4" />
-            Sign out
+        <form onSubmit={handleSignOut} className="w-full">
+          <Button variant="outline" className="w-full" type="submit" disabled={isSigningOut}>
+            {isSigningOut ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                Signing out...
+              </>
+            ) : (
+              <>
+                <LogOut className="mr-2 size-4" aria-hidden="true" />
+                Sign out
+              </>
+            )}
           </Button>
         </form>
       </div>
