@@ -125,7 +125,7 @@ export function AddSubscriptionForm({
       >
         <Card className="w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
           <CardHeader className="relative space-y-1 shrink-0">
-            <CardTitle className="text-xl font-semibold leading-tight tracking-tight md:text-2xl lg:text-3xl">
+            <CardTitle className="text-xl font-heading font-semibold leading-tight tracking-tight md:text-2xl lg:text-3xl">
               Add Subscription
             </CardTitle>
             <CardDescription className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">

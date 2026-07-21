@@ -72,9 +72,9 @@ Every level below is defined with three font-size steps — mobile (base, unpref
 | Element Level | Mobile (base) | Tablet (`md:`) | Desktop (`lg:`) | Font Weight | Line Height | Usage |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Display / Hero** | `text-2xl` | `md:text-3xl` | `lg:text-4xl` | `font-bold` | `leading-tight` | Empty-state hero text, onboarding headlines, marketing sections |
-| **Page Header / H1** | `text-xl` | `md:text-2xl` | `lg:text-3xl` | `font-semibold` | `leading-tight` | Main page titles, dashboard headings |
-| **Section Title / H2** | `text-lg` | `md:text-xl` | `lg:text-2xl` | `font-medium` | `leading-snug` | Card titles, calendar month headings |
-| **Subsection Header / H3** | `text-base` | `md:text-lg` | `lg:text-xl` | `font-semibold` | `leading-normal` | Form field groups, list category headers |
+| **Page Header / H1** | `text-xl` | `md:text-2xl` | `lg:text-3xl` | `font-heading` | `leading-tight` | Main page titles, dashboard headings |
+| **Section Title / H2** | `text-lg` | `md:text-xl` | `lg:text-2xl` | `font-heading` | `leading-snug` | Card titles, calendar month headings |
+| **Subsection Header / H3** | `text-base` | `md:text-lg` | `lg:text-xl` | `font-heading` | `leading-normal` | Form field groups, list category headers |
 | **Body Text / Standard** | `text-sm` | `md:text-base` | `lg:text-base` | `font-normal` | `leading-relaxed` | Main paragraphs, description blocks |
 | **Large Body / Emphasis** | `text-base` | `md:text-lg` | `lg:text-lg` | `font-medium` | `leading-relaxed` | Plan summaries, callouts, emphasized copy |
 | **Muted Metadata / Subtitle** | `text-xs` | `md:text-xs` | `lg:text-sm` | `font-normal` | `leading-normal` | Timestamps, currency labels, secondary text |

@@ -43,7 +43,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
       {/* Header — account & profile details */}
       <div className="shrink-0 border-b p-6">
         <CardHeader className="p-0">
-          <CardTitle className="text-2xl font-bold">Welcome!</CardTitle>
+          <CardTitle className="text-2xl font-heading font-bold">Welcome!</CardTitle>
           <CardDescription>
             You have successfully logged in. Here are your account and profile
             details.
@@ -52,7 +52,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
 
         <div className="mt-4 space-y-4">
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <h3 className="text-xs font-heading font-semibold tracking-wider text-muted-foreground uppercase">
               Account Details
             </h3>
             <div className="grid grid-cols-3 gap-2 text-sm">
@@ -82,7 +82,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <h3 className="text-xs font-heading font-semibold tracking-wider text-muted-foreground uppercase">
               Profile Details
             </h3>
             {profile ? (
@@ -124,7 +124,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-bold">My Subscriptions</h2>
+            <h2 className="text-lg font-heading font-bold">My Subscriptions</h2>
             <p className="text-sm text-muted-foreground">
               {subscriptions.length === 0
                 ? "No active subscriptions"

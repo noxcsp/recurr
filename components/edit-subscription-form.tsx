@@ -140,7 +140,7 @@ export function EditSubscriptionForm({
       >
         <Card className="w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
           <CardHeader className="relative space-y-1 shrink-0">
-            <CardTitle className="text-xl font-semibold leading-tight tracking-tight md:text-2xl lg:text-3xl">
+            <CardTitle className="text-xl font-heading font-semibold leading-tight tracking-tight md:text-2xl lg:text-3xl">
               Edit Subscription
             </CardTitle>
             <CardDescription className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
@@ -170,7 +170,7 @@ export function EditSubscriptionForm({
               <PopoverContent side="bottom" align="end" className="w-64 p-4">
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none md:text-sm lg:text-base">Delete subscription?</p>
+                    <p className="text-sm font-heading font-medium leading-none md:text-sm lg:text-base">Delete subscription?</p>
                     <p className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
                       This will permanently remove{" "}
                       <span className="font-medium text-foreground">

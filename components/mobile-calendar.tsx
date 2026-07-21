@@ -72,7 +72,7 @@ function MobileCalendarToolbar({
         <span className="text-xs font-semibold uppercase tracking-wide leading-none text-muted-foreground">
           {year}
         </span>
-        <h1 className="rbc-toolbar-label text-xl font-semibold leading-tight text-foreground md:text-2xl">
+        <h1 className="rbc-toolbar-label text-xl font-heading font-semibold leading-tight text-foreground md:text-2xl">
           {monthName}
         </h1>
       </div>
@@ -308,7 +308,7 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
       <div className="mobile-calendar__events min-h-0 flex-1 overflow-y-auto border-t border-border">
         {/* Day header */}
         <div className="sticky top-0 z-10 border-b border-border bg-background px-4 py-2">
-          <h2 className="text-sm font-medium leading-relaxed text-foreground md:text-base">
+          <h2 className="text-sm font-heading font-medium leading-relaxed text-foreground md:text-base">
             {moment(selectedDate).format("dddd, MMMM D")}
           </h2>
         </div>

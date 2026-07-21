@@ -62,7 +62,7 @@ function CustomToolbar({ date, label, onNavigate }: ToolbarProps<SubscriptionEve
 
   return (
     <div className="rbc-toolbar border-b border-border bg-background px-4 py-3">
-      <h1 className="rbc-toolbar-label text-xl font-semibold leading-tight text-foreground md:text-2xl lg:text-3xl">
+      <h1 className="rbc-toolbar-label text-xl font-heading font-semibold leading-tight text-foreground md:text-2xl lg:text-3xl">
         {label}
       </h1>
 

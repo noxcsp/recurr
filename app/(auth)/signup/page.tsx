@@ -44,7 +44,7 @@ export default function SignupPage() {
   return (
     <Card className="w-full rounded-none">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-lg md:text-xl lg:text-2xl font-semibold leading-snug tracking-tight text-foreground">
+        <CardTitle className="text-lg md:text-xl lg:text-2xl font-heading font-semibold leading-snug tracking-tight text-foreground">
           Create an account
         </CardTitle>
         <CardDescription className="text-xs md:text-xs lg:text-sm font-normal leading-normal text-muted-foreground">

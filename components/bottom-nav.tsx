@@ -133,7 +133,7 @@ function DashboardPanel() {
         className="size-10 text-muted-foreground"
         aria-hidden="true"
       />
-      <h1 className="text-xl font-semibold leading-tight md:text-2xl lg:text-3xl">
+      <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl">
         Dashboard
       </h1>
       <p className="text-sm font-normal leading-relaxed text-muted-foreground md:text-base lg:text-base">
@@ -148,7 +148,7 @@ function SubscriptionsPanel({ subscriptions }: { subscriptions: Subscription[] }
     <div className="flex flex-col">
       {/* Panel header */}
       <div className="border-b border-border px-4 py-3">
-        <h1 className="text-xl font-semibold leading-tight md:text-2xl lg:text-3xl">
+        <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl">
           My Subscriptions
         </h1>
         <p className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
@@ -169,14 +169,14 @@ function SettingsPanel({ user }: { user: User }) {
     <div className="flex flex-col">
       {/* Panel header */}
       <div className="border-b border-border px-4 py-3">
-        <h1 className="text-xl font-semibold leading-tight md:text-2xl lg:text-3xl">
+        <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl">
           Settings
         </h1>
       </div>
 
       {/* Account section */}
       <div className="border-b border-border px-4 py-4">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide leading-none text-muted-foreground md:text-xs lg:text-sm">
+        <h2 className="mb-3 text-xs font-heading font-semibold uppercase tracking-wide leading-none text-muted-foreground md:text-xs lg:text-sm">
           Account
         </h2>
         <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm font-normal leading-relaxed md:text-base lg:text-base">
