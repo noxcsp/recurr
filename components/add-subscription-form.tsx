@@ -60,6 +60,7 @@ export function AddSubscriptionForm({
 
   const form = useForm<SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
+    mode: "onChange",
     defaultValues: {
       service_name: "",
       cost: 0,
@@ -85,6 +86,7 @@ export function AddSubscriptionForm({
     setError(null)
     const formattedValues: SubscriptionFormValues = {
       ...values,
+      cost: Number(values.cost),
       next_due_date: toUtcDate(values.next_due_date)!,
       trial_end_date: values.trial_end_date
         ? toUtcDate(values.trial_end_date)
@@ -119,9 +121,9 @@ export function AddSubscriptionForm({
       )}
       <DialogContent
         showCloseButton={false}
-        className="w-[calc(100%-2rem)] sm:w-full sm:max-w-md bg-transparent p-0 shadow-none ring-0"
+        className="w-[calc(100%-2rem)] sm:w-full sm:max-w-md bg-transparent p-0 shadow-none ring-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
       >
-        <Card className="w-full max-h-[calc(100dvh-2rem)] flex flex-col">
+        <Card className="w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
           <CardHeader className="relative space-y-1 shrink-0">
             <CardTitle className="text-xl font-semibold leading-tight tracking-tight md:text-2xl lg:text-3xl">
               Add Subscription
@@ -145,7 +147,7 @@ export function AddSubscriptionForm({
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="flex min-h-0 flex-1 flex-col justify-between"
+              className="flex min-h-0 flex-1 flex-col justify-between overflow-hidden"
             >
               <CardContent className="py-3 space-y-4 overflow-y-auto min-h-0 flex-1">
                 {error && (
@@ -183,14 +185,16 @@ export function AddSubscriptionForm({
                           </span>
                           <Input
                             type="number"
-                            step="1"
+                            step="any"
                             min="0"
                             placeholder="0.00"
                             className="pl-7"
                             {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.valueAsNumber || 0)
-                            }
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              field.onChange(val === "" ? "" : Number(val))
+                            }}
                           />
                         </div>
                       </FormControl>
