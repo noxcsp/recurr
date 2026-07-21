@@ -216,7 +216,7 @@ export function DailySwipeoff({
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
             className="flex flex-col items-center gap-3"
           >
-            <div className="flex size-16 items-center justify-center border border-border">
+            <div className="flex size-16 items-center justify-center">
               <Check className="size-8 text-foreground" strokeWidth={1.25} />
             </div>
             <p className="text-lg font-heading font-medium leading-snug text-foreground md:text-xl lg:text-2xl">
@@ -290,7 +290,7 @@ function StackedCard({
   stackIndex: number
 }) {
   const scale = 1 - stackIndex * 0.05
-  const yOffset = stackIndex * 8
+  const yOffset = stackIndex * 20
 
   return (
     <motion.div
