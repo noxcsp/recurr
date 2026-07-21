@@ -36,6 +36,7 @@ import { toast } from "sonner"
 
 import { addSubscription } from "@/app/home/actions"
 import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
+import { parseUtcToLocalDate, toUtcDate } from "@/lib/utils/date"
 
 interface AddSubscriptionFormProps {
   defaultDate?: Date
@@ -64,7 +65,7 @@ export function AddSubscriptionForm({
       cost: 0,
       plan_type: "Monthly",
       payment_mode: "",
-      next_due_date: defaultDate,
+      next_due_date: parseUtcToLocalDate(defaultDate),
       is_trial: false,
       trial_end_date: undefined,
       subscription_status: "unpaid",
@@ -73,14 +74,24 @@ export function AddSubscriptionForm({
 
   useEffect(() => {
     if (defaultDate) {
-      form.setValue("next_due_date", defaultDate)
+      const parsedDate = parseUtcToLocalDate(defaultDate)
+      if (parsedDate) {
+        form.setValue("next_due_date", parsedDate)
+      }
     }
   }, [defaultDate, form])
 
   const onSubmit = (values: SubscriptionFormValues) => {
     setError(null)
+    const formattedValues: SubscriptionFormValues = {
+      ...values,
+      next_due_date: toUtcDate(values.next_due_date)!,
+      trial_end_date: values.trial_end_date
+        ? toUtcDate(values.trial_end_date)
+        : undefined,
+    }
     startTransition(async () => {
-      const result = await addSubscription(values)
+      const result = await addSubscription(formattedValues)
       if (result?.error) {
         setError(result.error)
       } else if (result?.success) {

@@ -25,7 +25,7 @@ export function AddFAB({ bottomOffset = 72 }: AddFABProps) {
         type="button"
         aria-label="Add subscription"
         onClick={() => setOpen(true)}
-        style={{ bottom: bottomOffset + 16 }}
+        style={{ bottom: `calc(${bottomOffset + 16}px + env(safe-area-inset-bottom, 0px))` }}
         className={[
           // Position
           "fixed right-4 z-30",

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { LayoutDashboard, CalendarDays, List, Settings, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { SubscriptionCalendar } from "@/components/calendar"
+import { MobileCalendar } from "@/components/mobile-calendar"
 import { SubscriptionList } from "@/components/subscription-list"
 import { AddFAB } from "@/components/add-fab"
 import { Button } from "@/components/ui/button"
@@ -32,7 +32,7 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
       <main className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "dashboard" && <DashboardPanel />}
         {activeTab === "calendar" && (
-          <SubscriptionCalendar subscriptions={subscriptions} />
+          <MobileCalendar subscriptions={subscriptions} />
         )}
         {activeTab === "subscriptions" && (
           <SubscriptionsPanel subscriptions={subscriptions} />
@@ -41,12 +41,12 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
       </main>
 
       {/* Floating Add Button — above the nav, bottom-right */}
-      {activeTab === "calendar" || activeTab === "settings" ? null : <AddFAB bottomOffset={NAV_HEIGHT_PX} />}
+      {activeTab === "settings" ? null : <AddFAB bottomOffset={NAV_HEIGHT_PX} />}
 
       {/* Bottom navbar — 4 equal tabs with vertical separators */}
       <nav
-        className="relative z-20 shrink-0 border-t border-border bg-background"
-        style={{ height: NAV_HEIGHT_PX }}
+        className="relative z-20 shrink-0 border-t border-border bg-background pb-[env(safe-area-inset-bottom,0px)]"
+        style={{ height: `calc(${NAV_HEIGHT_PX}px + env(safe-area-inset-bottom, 0px))` }}
       >
         <div className="grid h-full grid-cols-4">
           <NavTab

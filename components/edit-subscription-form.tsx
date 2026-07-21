@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -40,6 +40,7 @@ import { Trash2 } from "lucide-react"
 import { updateSubscription, deleteSubscription } from "@/app/home/actions"
 import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 import { Subscription } from "@/types/subscriptions"
+import { parseUtcToLocalDate, toUtcDate } from "@/lib/utils/date"
 
 interface EditSubscriptionFormProps {
   subscription: Subscription
@@ -64,19 +65,41 @@ export function EditSubscriptionForm({
       cost: subscription.cost,
       plan_type: subscription.plan_type,
       payment_mode: subscription.payment_mode,
-      next_due_date: new Date(subscription.next_due_date),
+      next_due_date: parseUtcToLocalDate(subscription.next_due_date)!,
       is_trial: subscription.is_trial,
       trial_end_date: subscription.trial_end_date
-        ? new Date(subscription.trial_end_date)
+        ? parseUtcToLocalDate(subscription.trial_end_date)
         : undefined,
       subscription_status: subscription.subscription_status,
     },
   })
 
+  useEffect(() => {
+    form.reset({
+      service_name: subscription.service_name,
+      cost: subscription.cost,
+      plan_type: subscription.plan_type,
+      payment_mode: subscription.payment_mode,
+      next_due_date: parseUtcToLocalDate(subscription.next_due_date)!,
+      is_trial: subscription.is_trial,
+      trial_end_date: subscription.trial_end_date
+        ? parseUtcToLocalDate(subscription.trial_end_date)
+        : undefined,
+      subscription_status: subscription.subscription_status,
+    })
+  }, [subscription, form])
+
   const onSubmit = (values: SubscriptionFormValues) => {
     setError(null)
+    const formattedValues: SubscriptionFormValues = {
+      ...values,
+      next_due_date: toUtcDate(values.next_due_date)!,
+      trial_end_date: values.trial_end_date
+        ? toUtcDate(values.trial_end_date)
+        : undefined,
+    }
     startTransition(async () => {
-      const result = await updateSubscription(subscription.id, values)
+      const result = await updateSubscription(subscription.id, formattedValues)
       if (result?.error) {
         setError(result.error)
       } else if (result?.success) {

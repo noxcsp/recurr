@@ -13,7 +13,7 @@ import { updateSubscription } from "@/app/home/actions"
 import { toast } from "sonner"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useBreakpoint, type Breakpoint } from "@/hooks/useBreakpoint"
+import { toUtcDate } from "@/lib/utils/date"
 
 const DnDCalendar = withDragAndDrop<SubscriptionEvent>(
   ShadcnBigCalendar as ComponentType<CalendarProps<SubscriptionEvent>>
@@ -41,30 +41,12 @@ const planTypeVariant: Record<Subscription["plan_type"], string> = {
   Annual: "event-variant-outline",
 }
 
-// Build responsive format overrides based on the active breakpoint.
-// - Month label: shortened uppercase for mobile & tablet ("AUG 2026"), full for desktop ("August 2026")
-// - Day column headers: single letter for mobile ("M"), 3-letter for tablet ("MON"), full for desktop ("Monday")
-function getResponsiveFormats(breakpoint: Breakpoint): Formats {
-  const isCompact = breakpoint === "mobile" || breakpoint === "tablet"
-
-  return {
-    // Toolbar label — month + year
-    monthHeaderFormat: isCompact ? "MMM YYYY" : "MMMM YYYY",
-
-    // Day-of-week column headers in month view
-    weekdayFormat: (date: Date, culture?: string, loc?: { format: (d: Date, f: string, c?: string) => string }) => {
-      if (breakpoint === "mobile") {
-        // Single letter: M, T, W, …
-        return (loc?.format(date, "dd", culture) ?? moment(date).format("dd")).charAt(0).toUpperCase()
-      }
-      if (breakpoint === "tablet") {
-        // 3-letter uppercase: MON, TUE, WED, …
-        return (loc?.format(date, "ddd", culture) ?? moment(date).format("ddd")).toUpperCase()
-      }
-      // Desktop — full day name: Monday, Tuesday, …
-      return loc?.format(date, "dddd", culture) ?? moment(date).format("dddd")
-    },
-  }
+// Desktop format overrides
+const desktopFormats: Formats = {
+  monthHeaderFormat: "MMMM YYYY",
+  weekdayFormat: (date: Date, culture?: string, loc?: { format: (d: Date, f: string, c?: string) => string }) => {
+    return loc?.format(date, "dddd", culture) ?? moment(date).format("dddd")
+  },
 }
 
 // Custom Toolbar component — inline layout: month/year on the left (as page heading),
@@ -121,10 +103,6 @@ function CustomToolbar({ date, label, onNavigate }: ToolbarProps<SubscriptionEve
 export function SubscriptionCalendar({
   subscriptions,
 }: SubscriptionCalendarProps) {
-  // Responsive breakpoint for format switching
-  const breakpoint = useBreakpoint()
-  const formats = useMemo(() => getResponsiveFormats(breakpoint), [breakpoint])
-
   // Controlled date state (mirrors app/calendar/page.tsx)
   const [date, setDate] = useState(new Date())
 
@@ -171,13 +149,7 @@ export function SubscriptionCalendar({
   const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
     const nextStart = new Date(slotInfo.start)
     nextStart.setHours(0, 0, 0, 0)
-
-    // Convert local date to UTC midnight to prevent timezone shift when serialized on the server
-    const utcDate = new Date(
-      Date.UTC(nextStart.getFullYear(), nextStart.getMonth(), nextStart.getDate())
-    )
-
-    setAddDefaultDate(utcDate)
+    setAddDefaultDate(nextStart)
     setAddOpen(true)
   }, [])
 
@@ -202,11 +174,7 @@ export function SubscriptionCalendar({
       nextStart.setHours(0, 0, 0, 0)
 
       const sub = event.subscription
-
-      // Convert local date to UTC midnight to prevent timezone shift when serialized on the server
-      const utcDate = new Date(
-        Date.UTC(nextStart.getFullYear(), nextStart.getMonth(), nextStart.getDate())
-      )
+      const utcDate = toUtcDate(nextStart)!
 
       startTransition(async () => {
         // Optimistically update local state to move event to exactly 1 date
@@ -269,7 +237,7 @@ export function SubscriptionCalendar({
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
         onEventDrop={handleEventDrop}
-        formats={formats}
+        formats={desktopFormats}
         components={{
           toolbar: CustomToolbar,
         }}
