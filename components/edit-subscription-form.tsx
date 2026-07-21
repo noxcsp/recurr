@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -40,6 +40,7 @@ import { Trash2 } from "lucide-react"
 import { updateSubscription, deleteSubscription } from "@/app/home/actions"
 import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 import { Subscription } from "@/types/subscriptions"
+import { parseUtcToLocalDate, toUtcDate } from "@/lib/utils/date"
 
 interface EditSubscriptionFormProps {
   subscription: Subscription
@@ -59,24 +60,48 @@ export function EditSubscriptionForm({
 
   const form = useForm<SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
+    mode: "onChange",
     defaultValues: {
       service_name: subscription.service_name,
       cost: subscription.cost,
       plan_type: subscription.plan_type,
       payment_mode: subscription.payment_mode,
-      next_due_date: new Date(subscription.next_due_date),
+      next_due_date: parseUtcToLocalDate(subscription.next_due_date)!,
       is_trial: subscription.is_trial,
       trial_end_date: subscription.trial_end_date
-        ? new Date(subscription.trial_end_date)
+        ? parseUtcToLocalDate(subscription.trial_end_date)
         : undefined,
       subscription_status: subscription.subscription_status,
     },
   })
 
+  useEffect(() => {
+    form.reset({
+      service_name: subscription.service_name,
+      cost: subscription.cost,
+      plan_type: subscription.plan_type,
+      payment_mode: subscription.payment_mode,
+      next_due_date: parseUtcToLocalDate(subscription.next_due_date)!,
+      is_trial: subscription.is_trial,
+      trial_end_date: subscription.trial_end_date
+        ? parseUtcToLocalDate(subscription.trial_end_date)
+        : undefined,
+      subscription_status: subscription.subscription_status,
+    })
+  }, [subscription, form])
+
   const onSubmit = (values: SubscriptionFormValues) => {
     setError(null)
+    const formattedValues: SubscriptionFormValues = {
+      ...values,
+      cost: Number(values.cost),
+      next_due_date: toUtcDate(values.next_due_date)!,
+      trial_end_date: values.trial_end_date
+        ? toUtcDate(values.trial_end_date)
+        : undefined,
+    }
     startTransition(async () => {
-      const result = await updateSubscription(subscription.id, values)
+      const result = await updateSubscription(subscription.id, formattedValues)
       if (result?.error) {
         setError(result.error)
       } else if (result?.success) {
@@ -111,14 +136,14 @@ export function EditSubscriptionForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-md bg-transparent p-0 shadow-none ring-0"
+        className="w-[calc(100%-2rem)] sm:w-full sm:max-w-md bg-transparent p-0 shadow-none ring-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
       >
-        <Card className="w-full">
-          <CardHeader className="relative space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight">
+        <Card className="w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
+          <CardHeader className="relative space-y-1 shrink-0">
+            <CardTitle className="text-xl font-semibold leading-tight tracking-tight md:text-2xl lg:text-3xl">
               Edit Subscription
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
               Update the details for{" "}
               <span className="font-medium text-foreground">
                 {subscription.service_name}
@@ -133,7 +158,7 @@ export function EditSubscriptionForm({
                   <Button
                     type="button"
                     variant="ghost"
-                    className="absolute top-0 right-4 rounded-none text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    className="absolute top-0 right-4 rounded-none text-destructive hover:bg-muted hover:text-destructive"
                     size="icon-sm"
                     disabled={isDeleting || isPending}
                   />
@@ -145,8 +170,8 @@ export function EditSubscriptionForm({
               <PopoverContent side="bottom" align="end" className="w-64 p-4">
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">Delete subscription?</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm font-medium leading-none md:text-sm lg:text-base">Delete subscription?</p>
+                    <p className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
                       This will permanently remove{" "}
                       <span className="font-medium text-foreground">
                         {subscription.service_name}
@@ -159,7 +184,7 @@ export function EditSubscriptionForm({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="flex-1 rounded-none"
+                      className="flex-1 rounded-none text-xs font-medium leading-none md:text-xs lg:text-sm"
                       onClick={() => setDeletePopoverOpen(false)}
                       disabled={isDeleting}
                     >
@@ -169,7 +194,7 @@ export function EditSubscriptionForm({
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="flex-1 rounded-none"
+                      className="flex-1 rounded-none text-xs font-medium leading-none md:text-xs lg:text-sm"
                       onClick={onDelete}
                       disabled={isDeleting}
                     >
@@ -183,11 +208,11 @@ export function EditSubscriptionForm({
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="flex flex-col gap-4"
+              className="flex min-h-0 flex-1 flex-col justify-between overflow-hidden"
             >
-              <CardContent className="space-y-4">
+              <CardContent className="py-3 space-y-4 overflow-y-auto min-h-0 flex-1">
                 {error && (
-                  <div className="border border-destructive p-3 text-xs font-medium text-destructive">
+                  <div className="border border-destructive p-3 text-xs font-medium leading-normal text-destructive md:text-xs lg:text-sm">
                     {error}
                   </div>
                 )}
@@ -196,11 +221,13 @@ export function EditSubscriptionForm({
                   name="service_name"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Service Name</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Service Name
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. Netflix, Spotify" {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -209,26 +236,30 @@ export function EditSubscriptionForm({
                   name="cost"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Cost (₱)</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Cost (₱)
+                      </FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-xs text-muted-foreground">
+                          <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
                             ₱
                           </span>
                           <Input
                             type="number"
-                            step="1"
+                            step="any"
                             min="0"
                             placeholder="0.00"
                             className="pl-7"
                             {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.valueAsNumber || 0)
-                            }
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              field.onChange(val === "" ? "" : Number(val))
+                            }}
                           />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -237,7 +268,9 @@ export function EditSubscriptionForm({
                   name="plan_type"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Plan Type</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Plan Type
+                      </FormLabel>
                       <FormControl>
                         <Tabs
                           value={field.value ?? "Monthly"}
@@ -250,7 +283,7 @@ export function EditSubscriptionForm({
                           </TabsList>
                         </Tabs>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -259,7 +292,9 @@ export function EditSubscriptionForm({
                   name="subscription_status"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Status</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Status
+                      </FormLabel>
                       <FormControl>
                         <Tabs
                           value={field.value ?? "unpaid"}
@@ -271,7 +306,7 @@ export function EditSubscriptionForm({
                           </TabsList>
                         </Tabs>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -280,14 +315,16 @@ export function EditSubscriptionForm({
                   name="payment_mode"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Payment Mode</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Payment Mode
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="e.g. GCash, Credit Card"
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -296,14 +333,16 @@ export function EditSubscriptionForm({
                   name="next_due_date"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Next Due Date</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Next Due Date
+                      </FormLabel>
                       <FormControl>
                         <DatePicker
                           value={field.value}
                           onChange={field.onChange}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -323,10 +362,10 @@ export function EditSubscriptionForm({
                           }}
                         />
                       </FormControl>
-                      <FormLabel className="font-normal">
+                      <FormLabel className="text-sm font-normal leading-none md:text-sm lg:text-base">
                         This is a free trial
                       </FormLabel>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -336,31 +375,33 @@ export function EditSubscriptionForm({
                     name="trial_end_date"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Trial End Date</FormLabel>
+                        <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                          Trial End Date
+                        </FormLabel>
                         <FormControl>
                           <DatePicker
                             value={field.value ?? undefined}
                             onChange={field.onChange}
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                       </FormItem>
                     )}
                   />
                 )}
               </CardContent>
-              <CardFooter className="flex gap-2">
+              <CardFooter className="shrink-0 flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 rounded-none"
+                  className="flex-1 rounded-none text-sm font-medium leading-none md:text-sm lg:text-base"
                   onClick={() => onOpenChange(false)}
                   disabled={isPending || isDeleting}
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1"
+                  className="flex-1 text-sm font-medium leading-none md:text-sm lg:text-base"
                   type="submit"
                   disabled={isPending || isDeleting}
                 >

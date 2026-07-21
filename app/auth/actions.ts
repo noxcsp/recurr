@@ -70,6 +70,10 @@ export async function resetPassword(data: ResetPasswordFormValues) {
 
 export async function signout() {
   const supabase = await createClient()
-  await supabase.auth.signOut()
+  try {
+    await supabase.auth.signOut()
+  } catch {
+    // Ignore signout error if session/refresh token is already invalid/expired
+  }
   redirect('/')
 }

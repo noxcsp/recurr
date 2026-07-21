@@ -2,7 +2,7 @@
 
 import { ComponentType, useCallback, useMemo, useOptimistic, useState, useTransition } from "react"
 import moment from "moment"
-import { type CalendarProps, momentLocalizer, type SlotInfo, Views, type ToolbarProps } from "react-big-calendar"
+import { type CalendarProps, type Formats, momentLocalizer, type SlotInfo, Views, type ToolbarProps } from "react-big-calendar"
 import type { EventInteractionArgs } from "react-big-calendar/lib/addons/dragAndDrop"
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop"
 import ShadcnBigCalendar from "@/components/shadcn-big-calendar/shadcn-big-calendar"
@@ -11,6 +11,9 @@ import { AddSubscriptionForm } from "@/components/add-subscription-form"
 import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { updateSubscription } from "@/app/home/actions"
 import { toast } from "sonner"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { toUtcDate } from "@/lib/utils/date"
 
 const DnDCalendar = withDragAndDrop<SubscriptionEvent>(
   ShadcnBigCalendar as ComponentType<CalendarProps<SubscriptionEvent>>
@@ -38,43 +41,61 @@ const planTypeVariant: Record<Subscription["plan_type"], string> = {
   Annual: "event-variant-outline",
 }
 
-// Custom Toolbar component that only shows month/year and navigation controls,
-// with a highlighted 'Today' toggle when calendar is set to the current date.
+// Desktop format overrides
+const desktopFormats: Formats = {
+  monthHeaderFormat: "MMMM YYYY",
+  weekdayFormat: (date: Date, culture?: string, loc?: { format: (d: Date, f: string, c?: string) => string }) => {
+    return loc?.format(date, "dddd", culture) ?? moment(date).format("dddd")
+  },
+}
+
+// Custom Toolbar component — inline layout: month/year on the left (as page heading),
+// navigation controls on the right with bg-muted container fill.
 function CustomToolbar({ date, label, onNavigate }: ToolbarProps<SubscriptionEvent>) {
   const isToday = useMemo(() => {
     const today = new Date()
     return (
-      date.getDate() === today.getDate() &&
       date.getMonth() === today.getMonth() &&
       date.getFullYear() === today.getFullYear()
     )
   }, [date])
 
   return (
-    <div className="rbc-toolbar">
-      <span className="rbc-btn-group">
+    <div className="rbc-toolbar border-b border-border bg-background px-4 py-3">
+      <h1 className="rbc-toolbar-label text-xl font-semibold leading-tight text-foreground md:text-2xl lg:text-3xl">
+        {label}
+      </h1>
+
+      <div className="rbc-btn-group inline-flex items-center gap-1 border border-border bg-muted p-1">
         <button
           type="button"
           onClick={() => onNavigate("TODAY")}
-          className={isToday ? "rbc-active" : ""}
+          className={cn(
+            "h-7 px-2.5 text-xs font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-xs lg:text-sm",
+            isToday
+              ? "bg-foreground text-background font-semibold"
+              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+          )}
         >
           Today
         </button>
         <button
           type="button"
           onClick={() => onNavigate("PREV")}
+          aria-label="Previous month"
+          className="flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
-          Back
+          <ChevronLeft className="size-4" strokeWidth={1.5} />
         </button>
         <button
           type="button"
           onClick={() => onNavigate("NEXT")}
+          aria-label="Next month"
+          className="flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
-          Next
+          <ChevronRight className="size-4" strokeWidth={1.5} />
         </button>
-      </span>
-
-      <span className="rbc-toolbar-label">{label}</span>
+      </div>
     </div>
   )
 }
@@ -128,13 +149,7 @@ export function SubscriptionCalendar({
   const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
     const nextStart = new Date(slotInfo.start)
     nextStart.setHours(0, 0, 0, 0)
-
-    // Convert local date to UTC midnight to prevent timezone shift when serialized on the server
-    const utcDate = new Date(
-      Date.UTC(nextStart.getFullYear(), nextStart.getMonth(), nextStart.getDate())
-    )
-
-    setAddDefaultDate(utcDate)
+    setAddDefaultDate(nextStart)
     setAddOpen(true)
   }, [])
 
@@ -159,11 +174,7 @@ export function SubscriptionCalendar({
       nextStart.setHours(0, 0, 0, 0)
 
       const sub = event.subscription
-
-      // Convert local date to UTC midnight to prevent timezone shift when serialized on the server
-      const utcDate = new Date(
-        Date.UTC(nextStart.getFullYear(), nextStart.getMonth(), nextStart.getDate())
-      )
+      const utcDate = toUtcDate(nextStart)!
 
       startTransition(async () => {
         // Optimistically update local state to move event to exactly 1 date
@@ -226,6 +237,7 @@ export function SubscriptionCalendar({
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
         onEventDrop={handleEventDrop}
+        formats={desktopFormats}
         components={{
           toolbar: CustomToolbar,
         }}

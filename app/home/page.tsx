@@ -4,6 +4,7 @@ import { Profile } from "@/types/profiles"
 import { Subscription } from "@/types/subscriptions"
 import { Sidebar } from "@/components/sidebar"
 import { SubscriptionCalendar } from "@/components/calendar"
+import { BottomNav } from "@/components/bottom-nav"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -33,11 +34,17 @@ export default async function HomePage() {
   const subscriptions = (subscriptionsData ?? []) as Subscription[]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar user={user} profile={profile} subscriptions={subscriptions} />
-      <main className="flex-1 overflow-hidden p-4">
-        <SubscriptionCalendar subscriptions={subscriptions} />
-      </main>
-    </div>
+    <>
+      {/* Mobile layout — bottom navbar (hidden on lg and above) */}
+      <BottomNav user={user} profile={profile} subscriptions={subscriptions} />
+
+      {/* Desktop layout — sidebar + calendar (hidden below lg) */}
+      <div className="hidden h-screen overflow-hidden bg-background lg:flex">
+        <Sidebar user={user} profile={profile} subscriptions={subscriptions} />
+        <main className="flex-1 overflow-hidden p-4">
+          <SubscriptionCalendar subscriptions={subscriptions} />
+        </main>
+      </div>
+    </>
   )
 }

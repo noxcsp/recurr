@@ -36,6 +36,7 @@ import { toast } from "sonner"
 
 import { addSubscription } from "@/app/home/actions"
 import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
+import { parseUtcToLocalDate, toUtcDate } from "@/lib/utils/date"
 
 interface AddSubscriptionFormProps {
   defaultDate?: Date
@@ -59,12 +60,13 @@ export function AddSubscriptionForm({
 
   const form = useForm<SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
+    mode: "onChange",
     defaultValues: {
       service_name: "",
       cost: 0,
       plan_type: "Monthly",
       payment_mode: "",
-      next_due_date: defaultDate,
+      next_due_date: parseUtcToLocalDate(defaultDate),
       is_trial: false,
       trial_end_date: undefined,
       subscription_status: "unpaid",
@@ -73,14 +75,25 @@ export function AddSubscriptionForm({
 
   useEffect(() => {
     if (defaultDate) {
-      form.setValue("next_due_date", defaultDate)
+      const parsedDate = parseUtcToLocalDate(defaultDate)
+      if (parsedDate) {
+        form.setValue("next_due_date", parsedDate)
+      }
     }
   }, [defaultDate, form])
 
   const onSubmit = (values: SubscriptionFormValues) => {
     setError(null)
+    const formattedValues: SubscriptionFormValues = {
+      ...values,
+      cost: Number(values.cost),
+      next_due_date: toUtcDate(values.next_due_date)!,
+      trial_end_date: values.trial_end_date
+        ? toUtcDate(values.trial_end_date)
+        : undefined,
+    }
     startTransition(async () => {
-      const result = await addSubscription(values)
+      const result = await addSubscription(formattedValues)
       if (result?.error) {
         setError(result.error)
       } else if (result?.success) {
@@ -108,14 +121,14 @@ export function AddSubscriptionForm({
       )}
       <DialogContent
         showCloseButton={false}
-        className="max-w-md bg-transparent p-0 shadow-none ring-0"
+        className="w-[calc(100%-2rem)] sm:w-full sm:max-w-md bg-transparent p-0 shadow-none ring-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
       >
-        <Card className="w-full">
-          <CardHeader className="relative space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight">
+        <Card className="w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
+          <CardHeader className="relative space-y-1 shrink-0">
+            <CardTitle className="text-xl font-semibold leading-tight tracking-tight md:text-2xl lg:text-3xl">
               Add Subscription
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
               Enter the details of your new subscription.
             </CardDescription>
             <DialogClose
@@ -134,11 +147,11 @@ export function AddSubscriptionForm({
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="flex flex-col gap-4"
+              className="flex min-h-0 flex-1 flex-col justify-between overflow-hidden"
             >
-              <CardContent className="space-y-4">
+              <CardContent className="py-3 space-y-4 overflow-y-auto min-h-0 flex-1">
                 {error && (
-                  <div className="border border-destructive p-3 text-xs font-medium text-destructive">
+                  <div className="border border-destructive p-3 text-xs font-medium leading-normal text-destructive md:text-xs lg:text-sm">
                     {error}
                   </div>
                 )}
@@ -147,11 +160,13 @@ export function AddSubscriptionForm({
                   name="service_name"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Service Name</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Service Name
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. Netflix, Spotify" {...field} />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -160,26 +175,30 @@ export function AddSubscriptionForm({
                   name="cost"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Cost (₱)</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Cost (₱)
+                      </FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-xs text-muted-foreground">
+                          <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
                             ₱
                           </span>
                           <Input
                             type="number"
-                            step="1"
+                            step="any"
                             min="0"
                             placeholder="0.00"
                             className="pl-7"
                             {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.valueAsNumber || 0)
-                            }
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              field.onChange(val === "" ? "" : Number(val))
+                            }}
                           />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -188,7 +207,9 @@ export function AddSubscriptionForm({
                   name="plan_type"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Plan Type</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Plan Type
+                      </FormLabel>
                       <FormControl>
                         <Tabs
                           value={field.value ?? "Monthly"}
@@ -201,7 +222,7 @@ export function AddSubscriptionForm({
                           </TabsList>
                         </Tabs>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -210,7 +231,9 @@ export function AddSubscriptionForm({
                   name="subscription_status"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Status</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Status
+                      </FormLabel>
                       <FormControl>
                         <Tabs
                           value={field.value ?? "unpaid"}
@@ -222,7 +245,7 @@ export function AddSubscriptionForm({
                           </TabsList>
                         </Tabs>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -231,14 +254,16 @@ export function AddSubscriptionForm({
                   name="payment_mode"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Payment Mode</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Payment Mode
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="e.g. GCash, Credit Card"
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -247,14 +272,16 @@ export function AddSubscriptionForm({
                   name="next_due_date"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel>Next Due Date</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Next Due Date
+                      </FormLabel>
                       <FormControl>
                         <DatePicker
                           value={field.value}
                           onChange={field.onChange}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -274,10 +301,10 @@ export function AddSubscriptionForm({
                           }}
                         />
                       </FormControl>
-                      <FormLabel className="font-normal">
+                      <FormLabel className="text-sm font-normal leading-none md:text-sm lg:text-base">
                         This is a free trial
                       </FormLabel>
-                      <FormMessage />
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -287,21 +314,27 @@ export function AddSubscriptionForm({
                     name="trial_end_date"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Trial End Date</FormLabel>
+                        <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                          Trial End Date
+                        </FormLabel>
                         <FormControl>
                           <DatePicker
                             value={field.value ?? undefined}
                             onChange={field.onChange}
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                       </FormItem>
                     )}
                   />
                 )}
               </CardContent>
-              <CardFooter className="flex flex-col space-y-4">
-                <Button className="w-full" type="submit" disabled={isPending}>
+              <CardFooter className="shrink-0 flex flex-col space-y-4">
+                <Button
+                  className="w-full text-sm font-medium leading-none md:text-sm lg:text-base"
+                  type="submit"
+                  disabled={isPending}
+                >
                   {isPending ? "Adding..." : "Add Subscription"}
                 </Button>
               </CardFooter>

@@ -33,7 +33,7 @@ Colors are defined using the `oklch` color space to ensure uniform brightness pe
 | `--muted-foreground` | `oklch(0.556 0 0)` | `oklch(0.708 0 0)` | Low-contrast text, secondary labels |
 | `--border` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 10%)` | Standard 1px divider lines |
 | `--input` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 15%)` | Form input borders |
-| `--destructive` | `oklch(0.577 0.245 27.325)` | `oklch(0.704 0.191 22.216)` | Warnings, errors, unpaid/overdue badges |
+| `--destructive` | `oklch(0.577 0.245 27.325)` | `oklch(0.704 0.191 22.216)` | Error/warning **text** and unpaid/overdue status **labels** (text color only — never as a background fill) |
 
 ### Accessibility, Readability & Visibility Rules
 *   **Contrast Ratios**: All text must meet WCAG 2.1 AA contrast requirements (minimum **4.5:1** for standard body text, **3:1** for large heading text). 
@@ -41,6 +41,7 @@ Colors are defined using the `oklch` color space to ensure uniform brightness pe
     *   Subtle descriptions, metadata, or placeholders must use `text-muted-foreground`. Do not use lighter text shades that compromise readability.
 *   **Interactive State Contrast**: Hover, focus, and active states must remain distinct and visible. When focus is active, elements must display a sharp 1px ring (`focus-visible:ring-1 focus-visible:ring-ring/50`) and border update (`focus-visible:border-ring`).
 *   **Color as Meaning**: Never use color alone to convey subscription state (e.g., unpaid vs. paid). Support color indicators (such as badges) with text labels (e.g., "Paid", "Unpaid", "Overdue") to ensure screen-reader and colorblind accessibility.
+*   **State Colors Apply to Text, Not Backgrounds**: Semantic state tokens (e.g., `--destructive`) must be applied to text (`text-destructive`) and, where needed, borders (`border-destructive`). Do not use them as background fills (avoid `bg-destructive`, `bg-destructive/10`, etc.). Status badges and labels stay monoline — a bordered/outlined chip with colored text, not a colored block — to keep contrast predictable across light/dark themes and preserve the flat, borders-only aesthetic.
 
 ### Tailwind CSS v4 Theme Map
 Native variables are mapped within `@theme inline` in `app/globals.css`. Always use semantic utility classes (`bg-background`, `text-foreground`, `border-border`, `bg-primary`, etc.) instead of hardcoded hex codes or arbitrary OKLCH values.
@@ -60,17 +61,33 @@ To enforce the monoline aesthetic, the corner radius must remain strictly **zero
 
 ## 4. Typography Hierarchy
 
-To maintain visual discipline and high-density legibility, typography uses a highly standardized scale of sizes and font weights.
+To maintain visual discipline and high-density legibility, typography uses a highly standardized, **responsive** scale of sizes and font weights. Sizes are defined per breakpoint so text scales up gracefully on larger screens.
 
-| Element Level | Font Size | Font Weight | Line Height | Usage |
-| :--- | :--- | :--- | :--- | :--- |
-| **Page Header / H1** | `text-base` or `text-lg` | `font-semibold` | `leading-none` or `leading-tight` | Main page titles, dashboard headings |
-| **Section Title / H2** | `text-sm` | `font-medium` | `leading-snug` | Card titles, calendar month headings |
-| **Subsection Header / H3** | `text-xs` | `font-semibold` | `leading-normal` | Form field groups, list category headers |
-| **Body Text / Standard** | `text-xs` | `font-normal` | `leading-relaxed` | Main paragraphs, description blocks |
-| **Muted Metadata / Subtitle** | `text-[10px]` or `text-xs` | `font-normal` | `leading-normal` | Timestamps, currency labels, secondary text |
-| **Interactive Text / Buttons** | `text-xs` | `font-medium` | `leading-none` | Button labels, tabs, form selections |
-| **Forms & Input Labels** | `text-xs` | `font-medium` | `leading-none` | Input labels, validation error messages |
+Headings and body copy follow the industry-standard modular scale (16px/`text-base` as the body-text floor, headers stepping up through the standard `lg`/`xl`/`2xl`/`3xl` sizes) for readability and accessibility. Dense UI chrome — metadata, interactive labels, overlines — stays on the tighter end of the scale to preserve the high-density feel from Section 1. Headers are not part of that density budget: they should read clearly at a glance, not be squeezed to match table rows.
+
+### Responsive Type Scale
+
+Every level below is defined with three font-size steps — mobile (base, unprefixed), tablet (`md:`, ≥768px), and desktop (`lg:`, ≥1024px). Weight and line-height stay constant across breakpoints; only size increases.
+
+| Element Level | Mobile (base) | Tablet (`md:`) | Desktop (`lg:`) | Font Weight | Line Height | Usage |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Display / Hero** | `text-2xl` | `md:text-3xl` | `lg:text-4xl` | `font-bold` | `leading-tight` | Empty-state hero text, onboarding headlines, marketing sections |
+| **Page Header / H1** | `text-xl` | `md:text-2xl` | `lg:text-3xl` | `font-semibold` | `leading-tight` | Main page titles, dashboard headings |
+| **Section Title / H2** | `text-lg` | `md:text-xl` | `lg:text-2xl` | `font-medium` | `leading-snug` | Card titles, calendar month headings |
+| **Subsection Header / H3** | `text-base` | `md:text-lg` | `lg:text-xl` | `font-semibold` | `leading-normal` | Form field groups, list category headers |
+| **Body Text / Standard** | `text-sm` | `md:text-base` | `lg:text-base` | `font-normal` | `leading-relaxed` | Main paragraphs, description blocks |
+| **Large Body / Emphasis** | `text-base` | `md:text-lg` | `lg:text-lg` | `font-medium` | `leading-relaxed` | Plan summaries, callouts, emphasized copy |
+| **Muted Metadata / Subtitle** | `text-xs` | `md:text-xs` | `lg:text-sm` | `font-normal` | `leading-normal` | Timestamps, currency labels, secondary text |
+| **Interactive Text / Buttons** | `text-sm` | `md:text-sm` | `lg:text-base` | `font-medium` | `leading-none` | Button labels, tabs, form selections |
+| **Forms & Input Labels** | `text-sm` | `md:text-sm` | `lg:text-base` | `font-medium` | `leading-none` | Input labels, validation error messages |
+| **Overline / Eyebrow** | `text-xs` | `md:text-xs` | `lg:text-sm` | `font-semibold` `uppercase` `tracking-wide` | `leading-none` | Status kickers, section eyebrows above headings |
+| **Code / Monospace** | `text-sm` | `md:text-sm` | `lg:text-base` | `font-normal` `font-mono` | `leading-relaxed` | Inline code, IDs, API keys, technical values |
+
+### Responsive Scaling Rules
+*   **One step per breakpoint.** Scale each level up by exactly one Tailwind size step per breakpoint jump (mobile → `md:` → `lg:`). Never skip a step or jump two sizes at once — this keeps the vertical rhythm and hierarchy predictable at every width.
+*   **Weight and line-height are fixed.** Only `text-*` size changes across breakpoints; `font-weight` and `leading-*` stay the same at every viewport for a given element level.
+*   **Compose full responsive class strings.** Always write all three sizes together on the element, e.g. `className="text-lg md:text-xl lg:text-2xl font-medium leading-snug"` — never leave a breakpoint size unspecified and let it silently inherit mobile sizing on larger screens.
+*   **16px (`text-base`) is the body-text floor.** Standard paragraph and body copy should not render smaller than `text-base` at the `md:` breakpoint and above — this is the common accessibility baseline for comfortable reading, not just a density target. Compact/dense elements (metadata, overlines, table chrome) are the deliberate exceptions, not the default.
 
 ---
 
@@ -122,7 +139,7 @@ Components are managed and updated via `components.json`, pointing to the Supaba
 When creating or modifying Shadcn UI files (e.g., `components/ui/button.tsx`, `components/ui/input.tsx`):
 1.  **Strictly Extend Primitives**: Retain Base UI primitives for screen reader support and keyboard navigation.
 2.  **Apply Monoline Classes**: Make sure `rounded-none`, `border-border`, and `focus-visible:ring-1` are consistently implemented.
-3.  **Support States**: Style invalid states explicitly with `aria-invalid` classes (e.g., `aria-invalid:border-destructive`).
+3.  **Support States**: Style invalid states explicitly with `aria-invalid` classes applied to text and border color only (e.g., `aria-invalid:border-destructive aria-invalid:text-destructive`) — never a `bg-destructive` fill.
 
 ---
 
@@ -133,4 +150,3 @@ To verify design system compliance:
 2.  **Light/Dark Toggle**: Test the interface in both light and dark modes to verify readability, contrast ratios, and correct color values on interactive elements (e.g., selection highlights and focused inputs).
 3.  **Registry Conformity**: Check that any newly added component is declared in the local registry setup and respects the standard styling variables.
 4.  **Responsive Check**: Verify that resizing the viewport from narrow mobile widths to desktop layouts preserves grid lines, does not break components, and matches mobile-first priorities.
-
