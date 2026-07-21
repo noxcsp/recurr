@@ -32,9 +32,7 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
       <main className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "dashboard" && <DashboardPanel />}
         {activeTab === "calendar" && (
-          <div className="flex h-full flex-col p-4">
-            <SubscriptionCalendar subscriptions={subscriptions} />
-          </div>
+          <SubscriptionCalendar subscriptions={subscriptions} />
         )}
         {activeTab === "subscriptions" && (
           <SubscriptionsPanel subscriptions={subscriptions} />
@@ -43,7 +41,7 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
       </main>
 
       {/* Floating Add Button — above the nav, bottom-right */}
-      <AddFAB bottomOffset={NAV_HEIGHT_PX} />
+      {activeTab === "calendar" || activeTab === "settings" ? null : <AddFAB bottomOffset={NAV_HEIGHT_PX} />}
 
       {/* Bottom navbar — 4 equal tabs with vertical separators */}
       <nav
@@ -114,9 +112,9 @@ function NavTab({ id, label, icon, active, onClick, isLast = false }: NavTabProp
         "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         active
           ? // Active: full block fill — foreground bg, inverted text
-            "bg-foreground text-background"
+          "bg-foreground text-background"
           : // Inactive: transparent, muted text; subtle hover
-            "text-muted-foreground hover:bg-muted hover:text-foreground"
+          "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
       {icon}
