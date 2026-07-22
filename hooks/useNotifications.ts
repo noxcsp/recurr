@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
   getNotifications,
@@ -9,12 +9,13 @@ import {
   deleteNotification,
 } from "@/app/home/notification-actions"
 import type { Notification } from "@/types/notifications"
-import type { RealtimeChannel } from "@supabase/supabase-js"
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
+  const supabase = useMemo(() => createClient(), [])
 
   const refetch = useCallback(async () => {
     const res = await getNotifications()
@@ -27,7 +28,6 @@ export function useNotifications() {
   useEffect(() => {
     let isMounted = true
     let activeChannel: RealtimeChannel | null = null
-    const supabase = createClient()
 
     const initNotifications = async () => {
       const res = await getNotifications()
@@ -54,10 +54,25 @@ export function useNotifications() {
               table: "notifications",
               filter: `user_id=eq.${user.id}`,
             },
-            async () => {
-              const freshRes = await getNotifications()
-              if (isMounted && freshRes.data) {
-                setNotifications(freshRes.data)
+            (payload: RealtimePostgresChangesPayload<Notification>) => {
+              if (!isMounted) return
+
+              if (payload.eventType === "INSERT") {
+                const newNotif = payload.new as Notification
+                setNotifications((prev) => {
+                  if (prev.some((n) => n.id === newNotif.id)) return prev
+                  return [newNotif, ...prev]
+                })
+              } else if (payload.eventType === "UPDATE") {
+                const updatedNotif = payload.new as Notification
+                setNotifications((prev) =>
+                  prev.map((n) => (n.id === updatedNotif.id ? { ...n, ...updatedNotif } : n))
+                )
+              } else if (payload.eventType === "DELETE") {
+                const deletedId = (payload.old as Partial<Notification>).id
+                if (deletedId) {
+                  setNotifications((prev) => prev.filter((n) => n.id !== deletedId))
+                }
               }
             }
           )
@@ -73,7 +88,7 @@ export function useNotifications() {
         supabase.removeChannel(activeChannel)
       }
     }
-  }, [])
+  }, [supabase])
 
   const markAsRead = useCallback(async (id: string) => {
     setActionInProgress(id)

@@ -18,20 +18,20 @@ export default async function HomePage() {
 
   const user = userData.user
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
+  const [{ data: profileData }, { data: subscriptionsData }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+  ])
 
   const profile = profileData as Profile | null
-
-  const { data: subscriptionsData } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-
   const subscriptions = (subscriptionsData ?? []) as Subscription[]
 
   // Compute today's date string (YYYY-MM-DD) server-side for consistent comparison
