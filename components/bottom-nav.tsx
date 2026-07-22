@@ -32,7 +32,7 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
   return (
     <div className="flex h-dvh flex-col lg:hidden">
       {/* Mobile top app bar */}
-      <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2.5">
+      <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]">
         <span className="font-heading text-lg font-bold tracking-tight text-foreground">
           RECURR
         </span>

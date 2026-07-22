@@ -136,7 +136,7 @@ export function DailySwipeoff({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background pb-[env(safe-area-inset-bottom,0px)]">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
       {/* ── Progress bar ─────────────────────────────────────────────────── */}
       <div className="w-full shrink-0 bg-muted">
         <div
