@@ -1,16 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { LayoutDashboard, CalendarDays, List, Settings, LogOut } from "lucide-react"
+import { LayoutDashboard, CalendarDays, List, Settings, LogOut, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MobileCalendar } from "@/components/mobile-calendar"
 import { SubscriptionList } from "@/components/subscription-list"
 import { AddFAB } from "@/components/add-fab"
 import { Button } from "@/components/ui/button"
+import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { signout } from "@/app/auth/actions"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/profiles"
 import type { Subscription } from "@/types/subscriptions"
+import { NotificationPopover } from "@/components/notification-panel"
 
 // Nav height in px — shared with AddFAB so the button clears the bar exactly
 export const NAV_HEIGHT_PX = 72
@@ -28,6 +30,14 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
 
   return (
     <div className="flex h-dvh flex-col lg:hidden">
+      {/* Mobile top app bar */}
+      <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2.5">
+        <span className="font-heading text-lg font-bold tracking-tight text-foreground">
+          RECURR
+        </span>
+        <NotificationPopover />
+      </header>
+
       {/* Tab content — fills all space above navbar */}
       <main className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "dashboard" && <DashboardPanel />}
@@ -165,6 +175,20 @@ function SubscriptionsPanel({ subscriptions }: { subscriptions: Subscription[] }
 }
 
 function SettingsPanel({ user }: { user: User }) {
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const { clearFcmToken } = usePushNotifications()
+
+  const handleSignOut = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSigningOut(true)
+    try {
+      await clearFcmToken()
+    } catch (error) {
+      console.error("Failed to clear FCM token on sign out:", error)
+    }
+    await signout()
+  }
+
   return (
     <div className="flex flex-col">
       {/* Panel header */}
@@ -193,17 +217,29 @@ function SettingsPanel({ user }: { user: User }) {
 
       {/* Sign out */}
       <div className="px-4 py-4">
-        <form action={signout}>
+        <form onSubmit={handleSignOut}>
           <Button
             variant="outline"
             type="submit"
+            disabled={isSigningOut}
             className="w-full text-sm font-medium leading-none md:text-sm lg:text-base"
           >
-            <LogOut className="mr-2 size-4" aria-hidden="true" />
-            Sign out
+            {isSigningOut ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                Signing out...
+              </>
+            ) : (
+              <>
+                <LogOut className="mr-2 size-4" aria-hidden="true" />
+                Sign out
+              </>
+            )}
           </Button>
         </form>
       </div>
     </div>
   )
 }
+
+
