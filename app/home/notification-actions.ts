@@ -4,11 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import type { Notification } from "@/types/notifications"
 
-/**
- * Fetches all notifications for the currently logged-in user,
- * ordered by creation date descending.
- */
-export async function getNotifications(): Promise<{
+export async function getNotifications(limit: number = 20): Promise<{
   data: Notification[]
   error?: string
 }> {
@@ -25,6 +21,7 @@ export async function getNotifications(): Promise<{
     .select("*")
     .eq("user_id", userData.user.id)
     .order("created_at", { ascending: false })
+    .limit(limit)
 
   if (error) {
     return { data: [], error: error.message }
@@ -55,7 +52,6 @@ export async function markNotificationAsRead(id: string) {
     return { error: error.message }
   }
 
-  revalidatePath("/home")
   return { success: true }
 }
 

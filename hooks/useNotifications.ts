@@ -9,6 +9,7 @@ import {
   deleteNotification,
 } from "@/app/home/notification-actions"
 import type { Notification } from "@/types/notifications"
+import type { RealtimeChannel } from "@supabase/supabase-js"
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -25,8 +26,10 @@ export function useNotifications() {
 
   useEffect(() => {
     let isMounted = true
+    let activeChannel: RealtimeChannel | null = null
+    const supabase = createClient()
 
-    const loadNotifications = async () => {
+    const initNotifications = async () => {
       const res = await getNotifications()
       if (isMounted) {
         if (res.data) {
@@ -34,31 +37,41 @@ export function useNotifications() {
         }
         setLoading(false)
       }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user && isMounted) {
+        const channelName = `notif_${user.id}_${Math.random().toString(36).substring(2, 8)}`
+        activeChannel = supabase
+          .channel(channelName)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${user.id}`,
+            },
+            async () => {
+              const freshRes = await getNotifications()
+              if (isMounted && freshRes.data) {
+                setNotifications(freshRes.data)
+              }
+            }
+          )
+          .subscribe()
+      }
     }
 
-    loadNotifications()
-
-    // Real-time subscription to user's notifications table with a unique channel topic per hook instance
-    const supabase = createClient()
-    const channelName = `notifications_${Math.random().toString(36).substring(2, 9)}`
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-        },
-        () => {
-          loadNotifications()
-        }
-      )
-      .subscribe()
+    initNotifications()
 
     return () => {
       isMounted = false
-      supabase.removeChannel(channel)
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel)
+      }
     }
   }, [])
 

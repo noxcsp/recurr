@@ -75,7 +75,7 @@ async function getFirebaseAccessToken(): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// FCM HTTP v1 sender
+// FCM HTTP v1 sender & Types
 // ---------------------------------------------------------------------------
 
 interface NotificationResult {
@@ -86,6 +86,7 @@ interface NotificationResult {
   days_overdue?: number;
   success: boolean;
   error?: string;
+  isUnregistered?: boolean;
 }
 
 async function sendFcmNotification(
@@ -93,7 +94,7 @@ async function sendFcmNotification(
   fcmToken: string,
   title: string,
   body: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; isUnregistered?: boolean }> {
   const url = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
 
   const res = await fetch(url, {
@@ -116,7 +117,13 @@ async function sendFcmNotification(
 
   if (!res.ok) {
     const errorText = await res.text();
-    return { success: false, error: errorText };
+    const isUnregistered =
+      res.status === 404 ||
+      res.status === 410 ||
+      errorText.includes("UNREGISTERED") ||
+      errorText.includes("INVALID_ARGUMENT");
+
+    return { success: false, error: errorText, isUnregistered };
   }
   return { success: true };
 }
@@ -161,35 +168,67 @@ Deno.serve(async () => {
 
     if (err2) throw new Error(`Query error (overdue): ${err2.message}`);
 
-    // Get unique user IDs from both result sets
     const allRows = [...(dueTomorrow ?? []), ...(overdueRows ?? [])];
-    const uniqueUserIds = [...new Set(allRows.map((r) => r.user_id))];
-
-    if (uniqueUserIds.length === 0) {
+    if (allRows.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No subscriptions to notify.", results: [] }),
+        JSON.stringify({ message: "No subscriptions due or overdue to notify.", results: [] }),
         { headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Batch-fetch FCM tokens for all relevant users
-    const { data: profiles, error: err3 } = await supabase
-      .from("profiles")
-      .select("id, fcm_token")
-      .in("id", uniqueUserIds)
-      .not("fcm_token", "is", null);
+    // ------------------------------------------------------------------
+    // 3. Idempotency Check: Fetch notifications inserted today
+    // ------------------------------------------------------------------
+    const { data: existingTodayNotifs } = await supabase
+      .from("notifications")
+      .select("subscription_id")
+      .gte("created_at", `${todayStr}T00:00:00Z`);
 
-    if (err3) throw new Error(`Profile query error: ${err3.message}`);
+    const notifiedSubIdsToday = new Set(
+      (existingTodayNotifs ?? [])
+        .map((n) => n.subscription_id)
+        .filter((id): id is string => Boolean(id))
+    );
 
+    // Filter out subscriptions that were already notified today
+    const pendingDueTomorrow = (dueTomorrow ?? []).filter(
+      (sub) => !notifiedSubIdsToday.has(sub.id)
+    );
+    const pendingOverdue = (overdueRows ?? []).filter(
+      (sub) => !notifiedSubIdsToday.has(sub.id)
+    );
+
+    const eligibleRows = [...pendingDueTomorrow, ...pendingOverdue];
+    const uniqueUserIds = [...new Set(eligibleRows.map((r) => r.user_id))];
+
+    if (eligibleRows.length === 0) {
+      return new Response(
+        JSON.stringify({ message: "All eligible subscriptions have already been notified today.", results: [] }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 4. Batch-fetch FCM tokens in chunks (max 250 user IDs per query)
+    // ------------------------------------------------------------------
     const tokenMap: Record<string, string> = {};
-    for (const p of profiles ?? []) {
-      if (p.fcm_token) tokenMap[p.id] = p.fcm_token;
+    const PROFILE_CHUNK_SIZE = 250;
+    for (let i = 0; i < uniqueUserIds.length; i += PROFILE_CHUNK_SIZE) {
+      const userChunk = uniqueUserIds.slice(i, i + PROFILE_CHUNK_SIZE);
+      const { data: profiles, error: err3 } = await supabase
+        .from("profiles")
+        .select("id, fcm_token")
+        .in("id", userChunk)
+        .not("fcm_token", "is", null);
+
+      if (err3) throw new Error(`Profile query error: ${err3.message}`);
+      for (const p of profiles ?? []) {
+        if (p.fcm_token) tokenMap[p.id] = p.fcm_token;
+      }
     }
 
     // Obtain Firebase access token once for all requests
     const accessToken = await getFirebaseAccessToken();
-
-    const results: NotificationResult[] = [];
 
     const notificationsToInsert: {
       user_id: string;
@@ -199,10 +238,23 @@ Deno.serve(async () => {
       is_read: boolean;
     }[] = [];
 
+    interface FcmTask {
+      subscription_id: string;
+      user_id: string;
+      service_name: string;
+      type: "due_tomorrow" | "overdue";
+      days_overdue?: number;
+      title: string;
+      body: string;
+      fcmToken: string;
+    }
+
+    const fcmTasks: FcmTask[] = [];
+
     // ------------------------------------------------------------------
-    // Send "due tomorrow" notifications & populate in-app notifications
+    // Prepare due tomorrow notifications & FCM push tasks
     // ------------------------------------------------------------------
-    for (const sub of dueTomorrow ?? []) {
+    for (const sub of pendingDueTomorrow) {
       const title = `⏰ ${sub.service_name} is due tomorrow`;
       const body = `Your ${sub.service_name} subscription (${sub.plan_type} plan) renews tomorrow. Make sure your payment is ready.`;
 
@@ -215,22 +267,23 @@ Deno.serve(async () => {
       });
 
       const fcmToken = tokenMap[sub.user_id];
-      if (!fcmToken) continue;
-
-      const result = await sendFcmNotification(accessToken, fcmToken, title, body);
-      results.push({
-        subscription_id: sub.id,
-        user_id: sub.user_id,
-        service_name: sub.service_name,
-        type: "due_tomorrow",
-        ...result,
-      });
+      if (fcmToken) {
+        fcmTasks.push({
+          subscription_id: sub.id,
+          user_id: sub.user_id,
+          service_name: sub.service_name,
+          type: "due_tomorrow",
+          title,
+          body,
+          fcmToken,
+        });
+      }
     }
 
     // ------------------------------------------------------------------
-    // Send overdue notifications & populate in-app notifications
+    // Prepare overdue notifications & FCM push tasks
     // ------------------------------------------------------------------
-    for (const sub of overdueRows ?? []) {
+    for (const sub of pendingOverdue) {
       const dueDate = new Date(`${sub.next_due_date}T00:00:00Z`);
       const todayMidnight = new Date(`${todayStr}T00:00:00Z`);
       const daysOverdue = Math.floor(
@@ -250,17 +303,68 @@ Deno.serve(async () => {
       });
 
       const fcmToken = tokenMap[sub.user_id];
-      if (!fcmToken) continue;
+      if (fcmToken) {
+        fcmTasks.push({
+          subscription_id: sub.id,
+          user_id: sub.user_id,
+          service_name: sub.service_name,
+          type: "overdue",
+          days_overdue: daysOverdue,
+          title,
+          body,
+          fcmToken,
+        });
+      }
+    }
 
-      const result = await sendFcmNotification(accessToken, fcmToken, title, body);
-      results.push({
-        subscription_id: sub.id,
-        user_id: sub.user_id,
-        service_name: sub.service_name,
-        type: "overdue",
-        days_overdue: daysOverdue,
-        ...result,
+    // ------------------------------------------------------------------
+    // Dispatch FCM notifications in concurrent batches (25 tasks per batch)
+    // ------------------------------------------------------------------
+    const results: NotificationResult[] = [];
+    const staleUserIds = new Set<string>();
+    const PUSH_BATCH_SIZE = 25;
+
+    for (let i = 0; i < fcmTasks.length; i += PUSH_BATCH_SIZE) {
+      const batch = fcmTasks.slice(i, i + PUSH_BATCH_SIZE);
+      const batchPromises = batch.map(async (task) => {
+        const res = await sendFcmNotification(accessToken, task.fcmToken, task.title, task.body);
+        if (res.isUnregistered) {
+          staleUserIds.add(task.user_id);
+        }
+        return {
+          subscription_id: task.subscription_id,
+          user_id: task.user_id,
+          service_name: task.service_name,
+          type: task.type,
+          days_overdue: task.days_overdue,
+          success: res.success,
+          error: res.error,
+          isUnregistered: res.isUnregistered,
+        };
       });
+
+      const settled = await Promise.allSettled(batchPromises);
+      for (const item of settled) {
+        if (item.status === "fulfilled") {
+          results.push(item.value);
+        }
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Prune stale FCM tokens from database
+    // ------------------------------------------------------------------
+    if (staleUserIds.size > 0) {
+      const staleUserList = [...staleUserIds];
+      console.log(`[send-due-notifications] Pruning ${staleUserList.length} stale FCM token(s)...`);
+      const { error: pruneError } = await supabase
+        .from("profiles")
+        .update({ fcm_token: null })
+        .in("id", staleUserList);
+
+      if (pruneError) {
+        console.error("[send-due-notifications] Failed to prune stale FCM tokens:", pruneError);
+      }
     }
 
     // ------------------------------------------------------------------
@@ -298,6 +402,7 @@ Deno.serve(async () => {
         total_fcm: results.length,
         success_fcm: successCount,
         failed_fcm: failCount,
+        pruned_stale_tokens: staleUserIds.size,
         inserted_in_app: insertedInAppCount,
         results,
       }),
