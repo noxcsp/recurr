@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useCallback, useMemo, useState } from "react"
-import moment from "moment"
+import { format, parse, startOfWeek, getDay } from "date-fns"
+import { enUS } from "date-fns/locale/en-US"
 import {
   type Formats,
-  momentLocalizer,
+  dateFnsLocalizer,
   type ToolbarProps,
   Views,
   type DateCellWrapperProps,
@@ -16,7 +17,15 @@ import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const localizer = momentLocalizer(moment)
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales: {
+    "en-US": enUS,
+  },
+})
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -42,10 +51,8 @@ const planTypeAccent: Record<Subscription["plan_type"], string> = {
 // ── Responsive formats (mobile-only — single letter weekday headers) ─────────
 
 const mobileFormats: Formats = {
-  monthHeaderFormat: "MMMM YYYY",
-  weekdayFormat: (date: Date, culture?: string, loc?: { format: (d: Date, f: string, c?: string) => string }) => {
-    return (loc?.format(date, "dd", culture) ?? moment(date).format("dd")).charAt(0).toUpperCase()
-  },
+  monthHeaderFormat: (date: Date) => format(date, "MMMM yyyy"),
+  weekdayFormat: (date: Date) => format(date, "eeeeee").toUpperCase(),
 }
 
 // ── Toolbar ────────────────────────────────────────────────────────────────────
@@ -63,7 +70,7 @@ function MobileCalendarToolbar({
   }, [date])
 
   const year = date.getFullYear()
-  const monthName = moment(date).format("MMMM")
+  const monthName = format(date, "MMMM")
 
   return (
     <div className="rbc-toolbar border-b border-border bg-background px-4 py-3">
@@ -239,7 +246,7 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
           }}
           role="button"
           tabIndex={0}
-          aria-label={`Select ${moment(value).format("MMMM D, YYYY")}`}
+          aria-label={`Select ${format(value, "MMMM d, yyyy")}`}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault()
@@ -309,7 +316,7 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
         {/* Day header */}
         <div className="sticky top-0 z-10 border-b border-border bg-background px-4 py-2">
           <h2 className="text-sm font-heading font-medium leading-relaxed text-foreground md:text-base">
-            {moment(selectedDate).format("dddd, MMMM D")}
+            {format(selectedDate, "EEEE, MMMM d")}
           </h2>
         </div>
 

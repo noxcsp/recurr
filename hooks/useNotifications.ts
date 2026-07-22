@@ -42,42 +42,53 @@ export function useNotifications() {
         data: { user },
       } = await supabase.auth.getUser()
 
-      if (user && isMounted) {
-        const channelName = `notif_${user.id}_${Math.random().toString(36).substring(2, 8)}`
-        activeChannel = supabase
-          .channel(channelName)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "notifications",
-              filter: `user_id=eq.${user.id}`,
-            },
-            (payload: RealtimePostgresChangesPayload<Notification>) => {
-              if (!isMounted) return
+      if (!user || !isMounted) return
 
-              if (payload.eventType === "INSERT") {
-                const newNotif = payload.new as Notification
-                setNotifications((prev) => {
-                  if (prev.some((n) => n.id === newNotif.id)) return prev
-                  return [newNotif, ...prev]
-                })
-              } else if (payload.eventType === "UPDATE") {
-                const updatedNotif = payload.new as Notification
-                setNotifications((prev) =>
-                  prev.map((n) => (n.id === updatedNotif.id ? { ...n, ...updatedNotif } : n))
-                )
-              } else if (payload.eventType === "DELETE") {
-                const deletedId = (payload.old as Partial<Notification>).id
-                if (deletedId) {
-                  setNotifications((prev) => prev.filter((n) => n.id !== deletedId))
-                }
+      const channelTopic = `notif_user_${user.id}`
+
+      const existingChannel = supabase
+        .getChannels()
+        .find((ch) => ch.topic === `realtime:${channelTopic}`)
+
+      if (existingChannel) {
+        await supabase.removeChannel(existingChannel)
+      }
+
+      if (!isMounted) return
+
+      activeChannel = supabase
+        .channel(channelTopic)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload: RealtimePostgresChangesPayload<Notification>) => {
+            if (!isMounted) return
+
+            if (payload.eventType === "INSERT") {
+              const newNotif = payload.new as Notification
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === newNotif.id)) return prev
+                return [newNotif, ...prev]
+              })
+            } else if (payload.eventType === "UPDATE") {
+              const updatedNotif = payload.new as Notification
+              setNotifications((prev) =>
+                prev.map((n) => (n.id === updatedNotif.id ? { ...n, ...updatedNotif } : n))
+              )
+            } else if (payload.eventType === "DELETE") {
+              const deletedId = (payload.old as Partial<Notification>).id
+              if (deletedId) {
+                setNotifications((prev) => prev.filter((n) => n.id !== deletedId))
               }
             }
-          )
-          .subscribe()
-      }
+          }
+        )
+        .subscribe()
     }
 
     initNotifications()

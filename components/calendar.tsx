@@ -1,8 +1,9 @@
 "use client"
 
 import { ComponentType, useCallback, useMemo, useOptimistic, useState, useTransition } from "react"
-import moment from "moment"
-import { type CalendarProps, type Formats, momentLocalizer, type SlotInfo, Views, type ToolbarProps } from "react-big-calendar"
+import { format, parse, startOfWeek, getDay } from "date-fns"
+import { enUS } from "date-fns/locale/en-US"
+import { type CalendarProps, type Formats, dateFnsLocalizer, type SlotInfo, Views, type ToolbarProps } from "react-big-calendar"
 import type { EventInteractionArgs } from "react-big-calendar/lib/addons/dragAndDrop"
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop"
 import ShadcnBigCalendar from "@/components/shadcn-big-calendar/shadcn-big-calendar"
@@ -19,7 +20,15 @@ const DnDCalendar = withDragAndDrop<SubscriptionEvent>(
   ShadcnBigCalendar as ComponentType<CalendarProps<SubscriptionEvent>>
 )
 
-const localizer = momentLocalizer(moment)
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales: {
+    "en-US": enUS,
+  },
+})
 
 // Types
 type SubscriptionEvent = {
@@ -43,10 +52,8 @@ const planTypeVariant: Record<Subscription["plan_type"], string> = {
 
 // Desktop format overrides
 const desktopFormats: Formats = {
-  monthHeaderFormat: "MMMM YYYY",
-  weekdayFormat: (date: Date, culture?: string, loc?: { format: (d: Date, f: string, c?: string) => string }) => {
-    return loc?.format(date, "dddd", culture) ?? moment(date).format("dddd")
-  },
+  monthHeaderFormat: (date: Date) => format(date, "MMMM yyyy"),
+  weekdayFormat: (date: Date) => format(date, "EEEE"),
 }
 
 // Custom Toolbar component — inline layout: month/year on the left (as page heading),
