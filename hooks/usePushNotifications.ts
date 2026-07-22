@@ -25,35 +25,32 @@ export const usePushNotifications = () => {
 
       let serviceWorkerRegistration: ServiceWorkerRegistration | undefined;
       if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        const queryParams = new URLSearchParams({
-          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
-          measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
-        });
-
+        // SW is served from /api/firebase-messaging-sw.js with config baked in
+        // server-side — no Firebase keys are exposed as URL query params.
         serviceWorkerRegistration = await navigator.serviceWorker.register(
-          `/firebase-messaging-sw.js?${queryParams.toString()}`,
+          '/api/firebase-messaging-sw.js',
           { scope: '/firebase-cloud-messaging-push-scope' }
         );
 
-        // Wait for the service worker to become active
+        // Wait for the service worker to become active using events (no polling).
         if (serviceWorkerRegistration && !serviceWorkerRegistration.active) {
           await new Promise<void>((resolve) => {
-            const interval = setInterval(() => {
-              if (serviceWorkerRegistration?.active) {
-                clearInterval(interval);
+            const sw =
+              serviceWorkerRegistration!.installing ??
+              serviceWorkerRegistration!.waiting;
+            if (!sw) {
+              resolve();
+              return;
+            }
+            const onStateChange = () => {
+              if (sw.state === 'activated') {
+                sw.removeEventListener('statechange', onStateChange);
                 resolve();
               }
-            }, 50);
-            // Timeout after 4 seconds to prevent hanging
-            setTimeout(() => {
-              clearInterval(interval);
-              resolve();
-            }, 4000);
+            };
+            sw.addEventListener('statechange', onStateChange);
+            // Safety timeout — resolve after 4 s regardless
+            setTimeout(resolve, 4000);
           });
         }
       }
