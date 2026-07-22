@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation"
 import { LogOut, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
+import { NotificationPopover } from "@/components/notification-panel"
 
 interface SidebarProps {
   user: User
@@ -55,7 +56,10 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
       {/* Header — account & profile details */}
       <div className="shrink-0 border-b p-6">
         <CardHeader className="p-0">
-          <CardTitle className="text-2xl font-heading font-bold">Welcome!</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-heading font-bold">Welcome!</CardTitle>
+            <NotificationPopover />
+          </div>
           <CardDescription>
             You have successfully logged in. Here are your account and profile
             details.

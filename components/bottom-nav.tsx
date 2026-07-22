@@ -12,6 +12,7 @@ import { signout } from "@/app/auth/actions"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/profiles"
 import type { Subscription } from "@/types/subscriptions"
+import { NotificationPopover } from "@/components/notification-panel"
 
 // Nav height in px — shared with AddFAB so the button clears the bar exactly
 export const NAV_HEIGHT_PX = 72
@@ -29,6 +30,14 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
 
   return (
     <div className="flex h-dvh flex-col lg:hidden">
+      {/* Mobile top app bar */}
+      <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2.5">
+        <span className="font-heading text-lg font-bold tracking-tight text-foreground">
+          RECURR
+        </span>
+        <NotificationPopover />
+      </header>
+
       {/* Tab content — fills all space above navbar */}
       <main className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "dashboard" && <DashboardPanel />}

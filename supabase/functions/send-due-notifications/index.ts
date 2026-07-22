@@ -1,4 +1,4 @@
-﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_ADMIN_PROJECT_ID")!;
 const FIREBASE_CLIENT_EMAIL = Deno.env.get("FIREBASE_ADMIN_CLIENT_EMAIL")!;
@@ -191,15 +191,31 @@ Deno.serve(async () => {
 
     const results: NotificationResult[] = [];
 
+    const notificationsToInsert: {
+      user_id: string;
+      subscription_id: string;
+      title: string;
+      body: string;
+      is_read: boolean;
+    }[] = [];
+
     // ------------------------------------------------------------------
-    // Send "due tomorrow" notifications
+    // Send "due tomorrow" notifications & populate in-app notifications
     // ------------------------------------------------------------------
     for (const sub of dueTomorrow ?? []) {
-      const fcmToken = tokenMap[sub.user_id];
-      if (!fcmToken) continue;
-
       const title = `⏰ ${sub.service_name} is due tomorrow`;
       const body = `Your ${sub.service_name} subscription (${sub.plan_type} plan) renews tomorrow. Make sure your payment is ready.`;
+
+      notificationsToInsert.push({
+        user_id: sub.user_id,
+        subscription_id: sub.id,
+        title,
+        body,
+        is_read: false,
+      });
+
+      const fcmToken = tokenMap[sub.user_id];
+      if (!fcmToken) continue;
 
       const result = await sendFcmNotification(accessToken, fcmToken, title, body);
       results.push({
@@ -212,12 +228,9 @@ Deno.serve(async () => {
     }
 
     // ------------------------------------------------------------------
-    // Send overdue notifications
+    // Send overdue notifications & populate in-app notifications
     // ------------------------------------------------------------------
     for (const sub of overdueRows ?? []) {
-      const fcmToken = tokenMap[sub.user_id];
-      if (!fcmToken) continue;
-
       const dueDate = new Date(`${sub.next_due_date}T00:00:00Z`);
       const todayMidnight = new Date(`${todayStr}T00:00:00Z`);
       const daysOverdue = Math.floor(
@@ -227,6 +240,17 @@ Deno.serve(async () => {
       const dayLabel = daysOverdue === 1 ? "day" : "days";
       const title = `🚨 ${sub.service_name} is ${daysOverdue} ${dayLabel} overdue`;
       const body = `Your ${sub.service_name} (${sub.plan_type} plan) payment is ${daysOverdue} ${dayLabel} overdue. Please settle it to avoid service interruption.`;
+
+      notificationsToInsert.push({
+        user_id: sub.user_id,
+        subscription_id: sub.id,
+        title,
+        body,
+        is_read: false,
+      });
+
+      const fcmToken = tokenMap[sub.user_id];
+      if (!fcmToken) continue;
 
       const result = await sendFcmNotification(accessToken, fcmToken, title, body);
       results.push({
@@ -239,19 +263,42 @@ Deno.serve(async () => {
       });
     }
 
+    // ------------------------------------------------------------------
+    // Batch insert in-app notifications into Supabase
+    // ------------------------------------------------------------------
+    let insertedInAppCount = 0;
+    if (notificationsToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from("notifications")
+        .insert(notificationsToInsert);
+
+      if (insertError) {
+        console.error(
+          "[send-due-notifications] Error batch inserting notifications:",
+          insertError
+        );
+      } else {
+        insertedInAppCount = notificationsToInsert.length;
+        console.log(
+          `[send-due-notifications] Successfully inserted ${insertedInAppCount} in-app notification(s).`
+        );
+      }
+    }
+
     const successCount = results.filter((r) => r.success).length;
     const failCount = results.length - successCount;
 
     console.log(
-      `[send-due-notifications] Sent ${successCount} notification(s), ${failCount} failed. Date: ${todayStr}`
+      `[send-due-notifications] FCM: ${successCount} sent, ${failCount} failed. In-app: ${insertedInAppCount} inserted. Date: ${todayStr}`
     );
 
     return new Response(
       JSON.stringify({
         date: todayStr,
-        total: results.length,
-        success: successCount,
-        failed: failCount,
+        total_fcm: results.length,
+        success_fcm: successCount,
+        failed_fcm: failCount,
+        inserted_in_app: insertedInAppCount,
         results,
       }),
       { headers: { "Content-Type": "application/json" } }
