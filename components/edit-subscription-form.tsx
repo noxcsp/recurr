@@ -301,6 +301,7 @@ export function EditSubscriptionForm({
                           onValueChange={(value) => field.onChange(value)}
                         >
                           <TabsList variant="line" className="w-full">
+                            <TabsTrigger value="overdue">Overdue</TabsTrigger>
                             <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
                             <TabsTrigger value="paid">Paid</TabsTrigger>
                           </TabsList>
