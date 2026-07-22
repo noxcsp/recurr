@@ -14,6 +14,7 @@ import ShadcnBigCalendar from "@/components/shadcn-big-calendar/shadcn-big-calen
 import { Subscription } from "@/types/subscriptions"
 import { AddSubscriptionForm } from "@/components/add-subscription-form"
 import { EditSubscriptionForm } from "@/components/edit-subscription-form"
+import { AddSubscriptionButton } from "@/components/add-subscription-button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -314,10 +315,15 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
       {/* Selected day events — scrollable list below */}
       <div className="mobile-calendar__events min-h-0 flex-1 overflow-y-auto border-t border-border">
         {/* Day header */}
-        <div className="sticky top-0 z-10 border-b border-border bg-background px-4 py-2">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-4 py-2">
           <h2 className="text-sm font-heading font-medium leading-relaxed text-foreground md:text-base">
             {format(selectedDate, "EEEE, MMMM d")}
           </h2>
+          <AddSubscriptionButton
+            defaultDate={selectedDate}
+            size="xs"
+            variant="outline"
+          />
         </div>
 
         {selectedDayEvents.length === 0 ? (
