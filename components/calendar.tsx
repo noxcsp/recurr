@@ -190,7 +190,7 @@ export function SubscriptionCalendar({
         const result = await updateSubscription(sub.id, {
           service_name: sub.service_name,
           cost: sub.cost,
-          plan_type: sub.plan_type,
+          plan_type: sub.plan_type as "Weekly" | "Monthly" | "Annual",
           payment_mode: sub.payment_mode,
           next_due_date: utcDate,
           is_trial: sub.is_trial,
