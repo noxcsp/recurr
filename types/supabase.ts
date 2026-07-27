@@ -54,24 +54,27 @@ export type Database = {
       }
       profiles: {
         Row: {
+          display_name: string | null
           fcm_token: string | null
           id: string
           last_swipeoff_date: string | null
-          timezone: string
+          timezone: string | null
           updated_at: string
         }
         Insert: {
+          display_name?: string | null
           fcm_token?: string | null
           id: string
           last_swipeoff_date?: string | null
-          timezone?: string
+          timezone?: string | null
           updated_at?: string
         }
         Update: {
+          display_name?: string | null
           fcm_token?: string | null
           id?: string
           last_swipeoff_date?: string | null
-          timezone?: string
+          timezone?: string | null
           updated_at?: string
         }
         Relationships: []

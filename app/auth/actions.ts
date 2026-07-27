@@ -36,7 +36,7 @@ export async function signup(data: SignupFormValues): Promise<{ error?: string; 
     password: validated.data.password,
     options: {
       data: {
-        timezone: 'Asia/Manila',
+        display_name: validated.data.display_name,
       },
     },
   })
@@ -45,9 +45,9 @@ export async function signup(data: SignupFormValues): Promise<{ error?: string; 
     return { error: error.message }
   }
 
+  await supabase.auth.signOut()
+
   revalidatePath('/', 'layout')
-  // Commented out email confirmation for the meantime
-  // return { success: true, message: 'Check your email to confirm your account.' }
   redirect('/')
 }
 
