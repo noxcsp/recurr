@@ -15,7 +15,8 @@ Stores user-specific metadata and notification configurations. This table has a 
 | Column Name | Data Type | Constraints & Defaults | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `uuid` | Primary Key, Foreign Key (`auth.users.id`) | Matches the Auth user UID. |
-| `timezone` | `text` | Default: `'Asia/Manila'` | User's timezone, used by cron jobs to trigger alerts at appropriate local times. |
+| `display_name` | `text` | Nullable | User's display name, populated from auth metadata during registration. |
+| `timezone` | `text` | Default: `NULL` | User's timezone, used by cron jobs to trigger alerts at appropriate local times. |
 | `fcm_token` | `text` | Nullable | Firebase Cloud Messaging token for sending push notifications. |
 | `updated_at` | `timestamptz` | Default: `timezone('utc'::text, now())` | Timestamp of the last profile modification. |
 
@@ -33,10 +34,11 @@ To ensure synchronization with authentication, a database trigger automatically 
 *   **SQL Definition**:
     ```sql
     begin
-        insert into public.profiles (id, timezone)
+        insert into public.profiles (id, display_name, timezone)
         values (
             new.id, 
-            coalesce(new.raw_user_meta_data->>'timezone', 'Asia/Manila')
+            new.raw_user_meta_data->>'display_name',
+            new.raw_user_meta_data->>'timezone'
         );
         return new;
     end;
@@ -219,10 +221,7 @@ export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
 export const signupSchema = z.object({
   display_name: z.string().min(1, 'Display name is required.'),
   email: z.string().email('Please enter a valid email address.'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters.')
-    .regex(/[0-9]/, 'Password must contain at least one number.')
-    .regex(/[^a-zA-Z0-9]/, 'Password must contain at least one special character.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
 })
 
 export type SignupFormValues = z.infer<typeof signupSchema>

@@ -27,18 +27,7 @@ interface SidebarProps {
 export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const { requestAndSaveToken, clearFcmToken } = usePushNotifications()
-
-  useEffect(() => {
-    const initNotifications = async () => {
-      const updated = await requestAndSaveToken()
-      if (updated) {
-        router.refresh()
-      }
-    }
-    initNotifications()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { clearFcmToken } = usePushNotifications()
 
   const handleSignOut = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,9 +93,16 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
             {profile ? (
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div className="font-semibold text-muted-foreground">
+                  Display Name:
+                </div>
+                <div className="col-span-2 truncate">
+                  {profile.display_name || user.user_metadata?.display_name || "N/A"}
+                </div>
+
+                <div className="font-semibold text-muted-foreground">
                   Timezone:
                 </div>
-                <div className="col-span-2">{profile.timezone}</div>
+                <div className="col-span-2">{profile.timezone || "Not set"}</div>
 
                 <div className="font-semibold text-muted-foreground">
                   FCM Token:

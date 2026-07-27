@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { LayoutDashboard, CalendarDays, List, Settings, LogOut, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { LayoutDashboard, CalendarDays, List, Settings, LogOut, Loader2, Trash2, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MobileCalendar } from "@/components/mobile-calendar"
 import { SubscriptionList } from "@/components/subscription-list"
@@ -9,11 +10,23 @@ import { AddFAB } from "@/components/add-fab"
 import { AddSubscriptionButton } from "@/components/add-subscription-button"
 import { Button } from "@/components/ui/button"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
-import { signout } from "@/app/auth/actions"
+import { deleteAccount, signout } from "@/app/auth/actions"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/profiles"
 import type { Subscription } from "@/types/subscriptions"
 import { NotificationPopover } from "@/components/notification-panel"
+import { SuccessScreen } from "@/components/success-screen"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 // Nav height in px — shared with AddFAB so the button clears the bar exactly
 export const NAV_HEIGHT_PX = 72
@@ -179,7 +192,11 @@ function SubscriptionsPanel({ subscriptions }: { subscriptions: Subscription[] }
 }
 
 function SettingsPanel({ user }: { user: User }) {
+  const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { clearFcmToken } = usePushNotifications()
 
   const handleSignOut = async (e: React.FormEvent) => {
@@ -191,6 +208,23 @@ function SettingsPanel({ user }: { user: User }) {
       console.error("Failed to clear FCM token on sign out:", error)
     }
     await signout()
+  }
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true)
+    setDeleteError(null)
+    try {
+      await clearFcmToken()
+    } catch (error) {
+      console.error("Failed to clear FCM token before deletion:", error)
+    }
+    const result = await deleteAccount()
+    if (result?.error) {
+      setDeleteError(result.error)
+      setIsDeletingAccount(false)
+    } else if (result?.success) {
+      router.push('/success')
+    }
   }
 
   return (
@@ -220,12 +254,12 @@ function SettingsPanel({ user }: { user: User }) {
       </div>
 
       {/* Sign out */}
-      <div className="px-4 py-4">
+      <div className="border-b border-border px-4 py-4">
         <form onSubmit={handleSignOut}>
           <Button
             variant="outline"
             type="submit"
-            disabled={isSigningOut}
+            disabled={isSigningOut || isDeletingAccount}
             className="w-full text-sm font-medium leading-none md:text-sm lg:text-base"
           >
             {isSigningOut ? (
@@ -241,6 +275,73 @@ function SettingsPanel({ user }: { user: User }) {
             )}
           </Button>
         </form>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="px-4 py-4">
+        <h2 className="mb-1 text-xs font-heading font-semibold uppercase tracking-wide leading-none text-destructive md:text-xs lg:text-sm">
+          Danger Zone
+        </h2>
+        <p className="mb-3 text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
+          Irreversible and destructive account actions.
+        </p>
+
+        {deleteError && (
+          <div className="mb-3 border border-destructive p-3 text-xs font-medium text-destructive">
+            {deleteError}
+          </div>
+        )}
+
+        <AlertDialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            if (isDeletingAccount) return
+            setIsDialogOpen(open)
+          }}
+        >
+          <AlertDialogTrigger
+            render={
+              <Button
+                variant="destructive"
+                disabled={isSigningOut || isDeletingAccount}
+                className="w-full text-sm font-medium leading-none md:text-sm lg:text-base"
+              />
+            }
+          >
+            <Trash2 className="mr-2 size-4" aria-hidden="true" />
+            Delete Account
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="size-5" aria-hidden="true" />
+                Delete Account
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action is non-recoverable. All of your subscription records, notification feeds, and account data will be permanently wiped.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingAccount}>
+                Cancel
+              </AlertDialogCancel>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount}
+              >
+                {isDeletingAccount ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete My Account"
+                )}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
