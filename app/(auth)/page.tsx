@@ -31,7 +31,6 @@ export default function LoginPage() {
       const result = await login(values)
       if (result?.error) {
         setError(result.error)
-        form.setError('password', { type: 'manual', message: result.error })
       }
     })
   }

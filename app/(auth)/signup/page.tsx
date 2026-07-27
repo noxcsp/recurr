@@ -183,7 +183,6 @@ export default function SignupPage() {
                         )}
                       </Button>
                     </div>
-                    <FormMessage className="text-xs md:text-xs lg:text-sm font-medium text-destructive" />
                     <div className="mt-2 space-y-1.5 text-xs md:text-xs lg:text-xs font-medium">
                       {passwordRequirements.map((req) => (
                         <div
