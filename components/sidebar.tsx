@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Profile } from "@/types/profiles"
 import { Subscription } from "@/types/subscriptions"
-import { AddSubscriptionForm } from "@/components/add-subscription-form"
+import { AddSubscriptionButton } from "@/components/add-subscription-button"
 import { SubscriptionList } from "@/components/subscription-list"
 import { signout } from "@/app/auth/actions"
 import { useState, useEffect } from "react"
@@ -147,7 +147,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
                 : `${subscriptions.length} subscription${subscriptions.length !== 1 ? "s" : ""}`}
             </p>
           </div>
-          <AddSubscriptionForm />
+          <AddSubscriptionButton size="sm" variant="outline" />
         </div>
 
         <div className="flex-1 overflow-y-auto">

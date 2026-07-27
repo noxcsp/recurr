@@ -64,7 +64,7 @@ export function EditSubscriptionForm({
     defaultValues: {
       service_name: subscription.service_name,
       cost: subscription.cost,
-      plan_type: subscription.plan_type,
+      plan_type: subscription.plan_type as "Weekly" | "Monthly" | "Annual",
       payment_mode: subscription.payment_mode,
       next_due_date: parseUtcToLocalDate(subscription.next_due_date)!,
       is_trial: subscription.is_trial,
@@ -79,7 +79,7 @@ export function EditSubscriptionForm({
     form.reset({
       service_name: subscription.service_name,
       cost: subscription.cost,
-      plan_type: subscription.plan_type,
+      plan_type: subscription.plan_type as "Weekly" | "Monthly" | "Annual",
       payment_mode: subscription.payment_mode,
       next_due_date: parseUtcToLocalDate(subscription.next_due_date)!,
       is_trial: subscription.is_trial,

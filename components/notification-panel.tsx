@@ -61,7 +61,7 @@ export function NotificationPanel({
       </div>
 
       {/* Feed */}
-      <div className="max-h-[420px] min-h-[160px] overflow-y-auto">
+      <div className="max-h-[min(420px,calc(100dvh-120px))] min-h-40 overflow-y-auto">
         {loading ? (
           <NotificationSkeletons />
         ) : notifications.length === 0 ? (
