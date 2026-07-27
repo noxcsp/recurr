@@ -2,9 +2,33 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loginSchema, signupSchema, resetPasswordSchema, type LoginFormValues, type SignupFormValues, type ResetPasswordFormValues } from '@/lib/validations/auth'
+
+export async function signinWithOAuth(provider: 'google') {
+  const supabase = await createClient()
+  const headersList = await headers()
+  const host = headersList.get('host') || 'localhost:3000'
+  const protocol = headersList.get('x-forwarded-proto') || (process.env.NODE_ENV === 'development' ? 'https' : 'https')
+  const origin = `${protocol}://${host}`
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  if (data?.url) {
+    redirect(data.url)
+  }
+}
 
 export async function login(data: LoginFormValues) {
   const supabase = await createClient()
