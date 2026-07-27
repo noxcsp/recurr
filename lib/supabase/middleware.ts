@@ -41,6 +41,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname === '/signup' ||
     request.nextUrl.pathname === '/forgot-password' ||
+    request.nextUrl.pathname === '/success' ||
     request.nextUrl.pathname.startsWith('/auth')
 
   if ((error || !user) && !isAuthPage) {
