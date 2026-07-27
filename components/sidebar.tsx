@@ -27,18 +27,7 @@ interface SidebarProps {
 export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const { requestAndSaveToken, clearFcmToken } = usePushNotifications()
-
-  useEffect(() => {
-    const initNotifications = async () => {
-      const updated = await requestAndSaveToken()
-      if (updated) {
-        router.refresh()
-      }
-    }
-    initNotifications()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { clearFcmToken } = usePushNotifications()
 
   const handleSignOut = async (e: React.FormEvent) => {
     e.preventDefault()

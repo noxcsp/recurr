@@ -1,12 +1,42 @@
-'use client';
-
-import { useCallback } from "react";
-import { getToken, deleteToken } from "firebase/messaging";
+import { useCallback, useEffect } from "react";
+import { getToken, deleteToken, onMessage } from "firebase/messaging";
 import { messaging } from "@/lib/firebase";
 import { createClient } from "@/lib/supabase/client";
 
 export const usePushNotifications = () => {
   const supabase = createClient();
+
+  // Listen for real-time push notifications when the tab is in the foreground
+  useEffect(() => {
+    if (!messaging) return;
+
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log("Foreground FCM message received:", payload);
+      const title =
+        payload.notification?.title ||
+        (payload.data?.title as string | undefined) ||
+        "Notification";
+      const body =
+        payload.notification?.body ||
+        (payload.data?.body as string | undefined) ||
+        "";
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, {
+          body,
+          icon: "/favicon.ico",
+          data: payload.data,
+        });
+      }
+
+      // Dispatch custom event to notify in-app notification panel to refetch
+      window.dispatchEvent(
+        new CustomEvent("recurr-notification-received", { detail: payload })
+      );
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const requestAndSaveToken = useCallback(async (): Promise<boolean> => {
     try {
@@ -73,12 +103,6 @@ export const usePushNotifications = () => {
 
         if (user) {
           const cacheKey = `fcm_token_${user.id}`;
-          const cachedToken = localStorage.getItem(cacheKey);
-
-          if (cachedToken === currentToken) {
-            console.log('FCM token already cached and synced.');
-            return false; // No update occurred (already cached)
-          }
 
           const { data: profile } = await supabase
             .from('profiles')
@@ -97,7 +121,7 @@ export const usePushNotifications = () => {
             console.log('FCM Token successfully saved to profile!');
             updated = true;
           }
-          
+
           localStorage.setItem(cacheKey, currentToken);
           return updated; // Only returns true if the database was updated
         }

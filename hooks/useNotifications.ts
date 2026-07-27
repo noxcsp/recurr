@@ -101,6 +101,18 @@ export function useNotifications() {
     }
   }, [supabase])
 
+  useEffect(() => {
+    const handleNotifEvent = () => {
+      refetch()
+      setTimeout(refetch, 500)
+    }
+
+    window.addEventListener("recurr-notification-received", handleNotifEvent)
+    return () => {
+      window.removeEventListener("recurr-notification-received", handleNotifEvent)
+    }
+  }, [refetch])
+
   const markAsRead = useCallback(async (id: string) => {
     setActionInProgress(id)
     // Optimistic update

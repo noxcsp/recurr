@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DailySwipeoff } from "@/components/daily-swipeoff"
+import { usePushNotifications } from "@/hooks/usePushNotifications"
 import type { Subscription } from "@/types/subscriptions"
 
 interface HomeClientProps {
@@ -29,6 +30,17 @@ export function HomeClient({
   children,
 }: HomeClientProps) {
   const router = useRouter()
+  const { requestAndSaveToken } = usePushNotifications()
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      const updated = await requestAndSaveToken()
+      if (updated) {
+        router.refresh()
+      }
+    }
+    initNotifications()
+  }, [requestAndSaveToken, router])
 
   // Filter subscriptions due today by comparing the date portion of next_due_date
   const todaySubscriptions = useMemo(() => {
