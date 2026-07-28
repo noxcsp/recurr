@@ -1,4 +1,3 @@
-import * as React from "react"
 import {
   Card,
   CardContent,
@@ -42,7 +41,7 @@ export function DashboardMetrics({
           <CardDescription className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
             Monthly Spend
           </CardDescription>
-          <CardTitle className="text-3xl font-heading font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl">
+          <CardTitle className="text-3xl font-heading font-semibold tracking-tight text-foreground md:text-4xl lg:text-5xl">
             {monthlySpend}
           </CardTitle>
         </CardHeader>
@@ -79,7 +78,7 @@ export function DashboardMetrics({
             <CardDescription className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
               Active Subs
             </CardDescription>
-            <CardTitle className="text-3xl font-heading font-bold text-foreground md:text-4xl lg:text-5xl">
+            <CardTitle className="text-3xl font-heading font-semibold text-foreground md:text-4xl lg:text-5xl">
               {activeSubscriptionsCount}
             </CardTitle>
           </CardHeader>
@@ -91,7 +90,7 @@ export function DashboardMetrics({
             <CardDescription className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
               Due This Week
             </CardDescription>
-            <CardTitle className="text-3xl font-heading font-bold text-warning md:text-4xl lg:text-5xl">
+            <CardTitle className="text-3xl font-heading font-semibold text-warning md:text-4xl lg:text-5xl">
               {dueThisWeekCount}
             </CardTitle>
           </CardHeader>
@@ -104,7 +103,7 @@ export function DashboardMetrics({
           <CardDescription className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
             Top Monthly Subscription
           </CardDescription>
-          <CardTitle className="text-2xl font-heading font-bold tracking-tight text-primary md:text-3xl lg:text-4xl">
+          <CardTitle className="text-2xl font-heading font-semibold tracking-tight text-primary md:text-3xl lg:text-4xl">
             {topSubscriptionName}
           </CardTitle>
         </CardHeader>

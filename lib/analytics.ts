@@ -12,6 +12,12 @@ export function calculateDashboardAnalytics(
 ): DashboardAnalytics {
   const currentYear = referenceDate.getFullYear()
   const currentMonth = referenceDate.getMonth()
+  const formatter = new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   // Previous month calculations (handles January -> December transition)
   const prevMonthDate = new Date(referenceDate)
@@ -54,23 +60,23 @@ export function calculateDashboardAnalytics(
     } else if (diff > 0) {
       const pct = Math.round((diff / previousMonthSpend) * 100)
       spendTrend = "up"
-      trendPercentage = `${pct}% (+₱${diff.toFixed(2)})`
+      trendPercentage = `${pct}% (+${formatter.format(diff)})`
       trendLabel = "increased from last month"
     } else {
       const absDiff = Math.abs(diff)
       const pct = Math.round((absDiff / previousMonthSpend) * 100)
       spendTrend = "down"
-      trendPercentage = `${pct}% (-₱${absDiff.toFixed(2)})`
+      trendPercentage = `${pct}% (-${formatter.format(absDiff)})`
       trendLabel = "decreased from last month"
     }
   } else if (currentMonthSpend > 0) {
     // First-tracked baseline month: Use 'flat' so it displays in neutral text rather than alarmist red
     spendTrend = "flat"
-    trendPercentage = `+₱${currentMonthSpend.toFixed(2)}`
+    trendPercentage = `+${formatter.format(currentMonthSpend)}`
     trendLabel = "new spend this month"
   } else {
     spendTrend = "flat"
-    trendPercentage = "₱0.00"
+    trendPercentage = formatter.format(0)
     trendLabel = "no spend this month"
   }
 
@@ -93,7 +99,7 @@ export function calculateDashboardAnalytics(
 
   // 6. Top Subscription (highest normalized monthly cost)
   let topSubName = "N/A"
-  let topSubCostStr = "₱0.00 / month"
+  let topSubCostStr = formatter.format(0)
   let topSubBillingCycle = "No active subscriptions"
 
   if (subscriptions.length > 0) {
@@ -110,7 +116,7 @@ export function calculateDashboardAnalytics(
     const topSub = sortedSubs[0]
 
     topSubName = topSub.service_name
-    topSubCostStr = `₱${Number(topSub.cost).toFixed(2)} / ${topSub.plan_type.toLowerCase()}`
+    topSubCostStr = formatter.format(Number(topSub.cost))
 
     if (topSub.plan_type === "Monthly") {
       topSubBillingCycle = "Billed monthly"
@@ -121,8 +127,8 @@ export function calculateDashboardAnalytics(
     }
   }
 
-  const formattedMonthlySpend = `₱${currentMonthSpend.toFixed(2)}`
-  const formattedYearlySpend = `₱${currentYearSpend.toFixed(2)}`
+  const formattedMonthlySpend = formatter.format(currentMonthSpend)
+  const formattedYearlySpend = formatter.format(currentYearSpend)
 
   return {
     monthlySpend: formattedMonthlySpend,
