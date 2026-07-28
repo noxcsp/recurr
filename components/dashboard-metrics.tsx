@@ -6,13 +6,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { TrendingDown, TrendingUp } from "lucide-react"
+import { TrendingDown, TrendingUp, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface DashboardMetricsProps {
   monthlySpend?: string
-  spendTrend?: "up" | "down"
+  spendTrend?: "up" | "down" | "flat"
   trendPercentage?: string
+  trendLabel?: string
   activeSubscriptionsCount?: number
   dueThisWeekCount?: number
   topSubscriptionName?: string
@@ -22,18 +23,17 @@ export interface DashboardMetricsProps {
 }
 
 export function DashboardMetrics({
-  monthlySpend = "$248.50",
-  spendTrend = "down",
-  trendPercentage = "12%",
-  activeSubscriptionsCount = 12,
-  dueThisWeekCount = 3,
-  topSubscriptionName = "ChatGPT Plus",
-  topSubscriptionCost = "$20.00 / month",
-  topSubscriptionBillingCycle = "Renews on the 1st of every month",
+  monthlySpend = "₱0.00",
+  spendTrend = "flat",
+  trendPercentage = "0%",
+  trendLabel = "no change from last month",
+  activeSubscriptionsCount = 0,
+  dueThisWeekCount = 0,
+  topSubscriptionName = "N/A",
+  topSubscriptionCost = "₱0.00",
+  topSubscriptionBillingCycle = "No active subscriptions",
   className,
 }: DashboardMetricsProps) {
-  const isSpendDecreased = spendTrend === "down"
-
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Monthly Spend Card */}
@@ -50,16 +50,22 @@ export function DashboardMetrics({
           <div
             className={cn(
               "flex items-center gap-1.5 text-xs font-medium md:text-xs lg:text-sm",
-              isSpendDecreased ? "text-success" : "text-destructive"
+              spendTrend === "down"
+                ? "text-success"
+                : spendTrend === "up"
+                ? "text-destructive"
+                : "text-muted-foreground"
             )}
           >
-            {isSpendDecreased ? (
+            {spendTrend === "down" ? (
               <TrendingDown className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
+            ) : spendTrend === "up" ? (
               <TrendingUp className="size-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <Minus className="size-4 shrink-0" aria-hidden="true" />
             )}
             <span>
-              {trendPercentage} {isSpendDecreased ? "decreased" : "increased"} from last month
+              {trendPercentage} {trendLabel}
             </span>
           </div>
         </CardContent>

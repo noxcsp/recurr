@@ -2,6 +2,8 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Profile } from "@/types/profiles"
 import { Subscription } from "@/types/subscriptions"
+import { PaymentRecord } from "@/types/analytics"
+import { calculateDashboardAnalytics } from "@/lib/analytics"
 import { Sidebar } from "@/components/sidebar"
 import { SubscriptionCalendar } from "@/components/calendar"
 import { BottomNav } from "@/components/bottom-nav"
@@ -18,7 +20,7 @@ export default async function HomePage() {
 
   const user = userData.user
 
-  const [{ data: profileData }, { data: subscriptionsData }] = await Promise.all([
+  const [{ data: profileData }, { data: subscriptionsData }, { data: paymentsData }] = await Promise.all([
     supabase
       .from("profiles")
       .select("*")
@@ -29,10 +31,17 @@ export default async function HomePage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("subscription_payments")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("payment_date", { ascending: false }),
   ])
 
   const profile = profileData as Profile | null
   const subscriptions = (subscriptionsData ?? []) as Subscription[]
+  const payments = (paymentsData ?? []) as PaymentRecord[]
+  const analytics = calculateDashboardAnalytics(subscriptions, payments)
 
   // Compute today's date string (YYYY-MM-DD) server-side for consistent comparison
   const todayDateStr = new Date().toISOString().split("T")[0]
@@ -44,7 +53,12 @@ export default async function HomePage() {
       subscriptions={subscriptions}
     >
       {/* Mobile layout — bottom navbar (hidden on lg and above) */}
-      <BottomNav user={user} profile={profile} subscriptions={subscriptions} />
+      <BottomNav
+        user={user}
+        profile={profile}
+        subscriptions={subscriptions}
+        analytics={analytics}
+      />
 
       {/* Desktop layout — sidebar + calendar (hidden below lg) */}
       <div className="hidden h-screen overflow-hidden bg-background lg:flex">
