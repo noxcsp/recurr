@@ -20,21 +20,27 @@ export default async function HomePage() {
 
   const user = userData.user
 
+  // Optimize query window for payment records: only fetch payments from previous year onwards
+  // to calculate current month, previous month, and current year analytics without scanning millions of historical rows.
+  const currentYear = new Date().getFullYear()
+  const paymentWindowStartDate = `${currentYear - 1}-01-01T00:00:00.000Z`
+
   const [{ data: profileData }, { data: subscriptionsData }, { data: paymentsData }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("*")
+      .select("id, display_name, avatar_url, last_swipeoff_date, created_at, updated_at")
       .eq("id", user.id)
       .single(),
     supabase
       .from("subscriptions")
-      .select("*")
+      .select("id, user_id, service_name, plan_type, cost, next_due_date, subscription_status, created_at, updated_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("subscription_payments")
-      .select("*")
+      .select("id, subscription_id, user_id, amount, payment_date, created_at")
       .eq("user_id", user.id)
+      .gte("payment_date", paymentWindowStartDate)
       .order("payment_date", { ascending: false }),
   ])
 

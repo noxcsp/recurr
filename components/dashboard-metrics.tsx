@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingDown, TrendingUp, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -18,7 +19,59 @@ export interface DashboardMetricsProps {
   topSubscriptionName?: string
   topSubscriptionCost?: string
   topSubscriptionBillingCycle?: string
+  isLoading?: boolean
   className?: string
+}
+
+export function DashboardMetricsSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-4", className)}>
+      {/* Monthly Spend Card */}
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-4 w-28 md:h-4 lg:h-5" />
+          <Skeleton className="h-9 w-36 md:h-10 lg:h-12" />
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-1.5">
+            <Skeleton className="size-4 shrink-0" />
+            <Skeleton className="h-4 w-44 md:h-4 lg:h-5" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 1x2 Cards for Active Subscriptions and Due This Week */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Active Subscriptions Card */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-4 w-24 md:h-4 lg:h-5" />
+            <Skeleton className="h-9 w-12 md:h-10 lg:h-12" />
+          </CardHeader>
+        </Card>
+
+        {/* Due This Week Card */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-4 w-28 md:h-4 lg:h-5" />
+            <Skeleton className="h-9 w-12 md:h-10 lg:h-12" />
+          </CardHeader>
+        </Card>
+      </div>
+
+      {/* Top Monthly Subscription Card */}
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-4 w-44 md:h-4 lg:h-5" />
+          <Skeleton className="h-7 w-36 md:h-8 lg:h-9" />
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <Skeleton className="h-5 w-24 md:h-6 lg:h-7" />
+          <Skeleton className="h-4 w-40 md:h-4 lg:h-5" />
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 export function DashboardMetrics({
@@ -31,8 +84,12 @@ export function DashboardMetrics({
   topSubscriptionName = "N/A",
   topSubscriptionCost = "₱0.00",
   topSubscriptionBillingCycle = "No active subscriptions",
+  isLoading = false,
   className,
 }: DashboardMetricsProps) {
+  if (isLoading) {
+    return <DashboardMetricsSkeleton className={className} />
+  }
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Monthly Spend Card */}

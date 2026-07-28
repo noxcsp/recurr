@@ -1,5 +1,62 @@
 import type { Subscription } from "@/types/subscriptions"
 import type { PaymentRecord, DashboardAnalytics } from "@/types/analytics"
+import type { OverdueSubscriptionItem } from "@/components/overdue-subscriptions"
+
+/**
+ * Calculates the number of overdue subscriptions and returns formatted list items.
+ * A subscription is overdue if `subscription_status === 'overdue'` OR its `next_due_date` is earlier than today (and status is not 'paid').
+ */
+export function getOverdueSubscriptions(
+  subscriptions: Subscription[],
+  referenceDate: Date = new Date()
+): { count: number; overdueItems: OverdueSubscriptionItem[] } {
+  const today = new Date(referenceDate)
+  today.setHours(0, 0, 0, 0)
+
+  const formatter = new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+
+  const overdueList = subscriptions.filter((sub) => {
+    if (sub.subscription_status === "overdue") return true
+    if (sub.subscription_status === "paid") return false
+
+    // Treat next_due_date as local date (YYYY-MM-DD)
+    const [y, m, d] = sub.next_due_date.split("-").map(Number)
+    if (!y || !m || !d) return false
+    const dueDate = new Date(y, m - 1, d)
+    return dueDate < today
+  })
+
+  const overdueItems: OverdueSubscriptionItem[] = overdueList.map((sub) => {
+    const [y, m, d] = sub.next_due_date.split("-").map(Number)
+    let diffDays = 1
+    if (y && m && d) {
+      const dueDate = new Date(y, m - 1, d)
+      if (dueDate < today) {
+        const diffMs = today.getTime() - dueDate.getTime()
+        diffDays = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+      }
+    }
+
+    return {
+      id: sub.id,
+      name: sub.service_name,
+      billingCycle: sub.plan_type,
+      daysOverdue: diffDays === 1 ? "1 day" : `${diffDays} days`,
+      price: formatter.format(Number(sub.cost)),
+      imageUrl: "",
+    }
+  })
+
+  return {
+    count: overdueItems.length,
+    overdueItems,
+  }
+}
 
 /**
  * Calculates dashboard metrics including actual cash outflow spend trends,
@@ -126,6 +183,9 @@ export function calculateDashboardAnalytics(
       topSubBillingCycle = "Billed weekly"
     }
   }
+
+  // 7. Overdue Subscriptions
+  const overdueData = getOverdueSubscriptions(subscriptions, referenceDate)
 
   const formattedMonthlySpend = formatter.format(currentMonthSpend)
   const formattedYearlySpend = formatter.format(currentYearSpend)

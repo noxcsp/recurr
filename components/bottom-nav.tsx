@@ -57,7 +57,7 @@ export function BottomNav({ user, profile, subscriptions, analytics }: BottomNav
       {/* Tab content — fills all space above navbar */}
       <main className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "dashboard" && (
-          <DashboardPanel user={user} profile={profile} analytics={analytics} />
+          <DashboardPanel user={user} profile={profile} analytics={analytics} subscriptions={subscriptions} />
         )}
         {activeTab === "calendar" && (
           <MobileCalendar subscriptions={subscriptions} />
@@ -157,14 +157,24 @@ interface DashboardPanelProps {
   user: User
   profile: Profile | null
   analytics?: DashboardAnalytics
+  subscriptions: Subscription[]
 }
 
-function DashboardPanel({ user, profile, analytics }: DashboardPanelProps) {
+function getTimeBasedGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 18) return "Good afternoon"
+  return "Good evening"
+}
+
+function DashboardPanel({ user, profile, analytics, subscriptions }: DashboardPanelProps) {
+  const greeting = getTimeBasedGreeting()
+
   return (
     <div className="flex flex-col gap-4 p-4 md:p-6 overflow-y-auto pb-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-heading font-bold leading-tight md:text-2xl lg:text-3xl">
-          Hello, {profile?.display_name || user.user_metadata?.display_name || "there"}!  
+        <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl">
+          {greeting}, {profile?.display_name || user.user_metadata?.display_name || "Hey there!"}!
         </h1>
       </div>
       <DashboardMetrics
@@ -178,7 +188,7 @@ function DashboardPanel({ user, profile, analytics }: DashboardPanelProps) {
         topSubscriptionCost={analytics?.topSubscriptionCost}
         topSubscriptionBillingCycle={analytics?.topSubscriptionBillingCycle}
       />
-      <OverdueSubscriptions />
+      <OverdueSubscriptions subscriptions={subscriptions} />
     </div>
   )
 }

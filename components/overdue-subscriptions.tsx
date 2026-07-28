@@ -3,64 +3,65 @@
 import * as React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import type { Subscription } from "@/types/subscriptions"
+import { getOverdueSubscriptions } from "@/lib/analytics"
+import { CheckCheck } from "lucide-react"
+import Image from "next/image"
 
 export interface OverdueSubscriptionItem {
   id: string
   name: string
   billingCycle: string
-  daysOverdue: number | string
+  daysOverdue: string
   price: string
   imageUrl: string
 }
 
 export interface OverdueSubscriptionsProps {
-  subscriptions?: OverdueSubscriptionItem[]
+  subscriptions?: Subscription[] | OverdueSubscriptionItem[]
+  isLoading?: boolean
   className?: string
 }
 
-const DEFAULT_OVERDUE_SUBSCRIPTIONS: OverdueSubscriptionItem[] = [
-  {
-    id: "overdue-1",
-    name: "Netflix",
-    billingCycle: "Monthly",
-    daysOverdue: "3 days",
-    price: "$15.99",
-    imageUrl: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=120&h=120&fit=crop&auto=format",
-  },
-  {
-    id: "overdue-2",
-    name: "Adobe Creative Cloud",
-    billingCycle: "Annual",
-    daysOverdue: "5 days",
-    price: "$54.99",
-    imageUrl: "https://images.unsplash.com/photo-1626785774573-4b799315345d?w=120&h=120&fit=crop&auto=format",
-  },
-  {
-    id: "overdue-3",
-    name: "Spotify Premium",
-    billingCycle: "Monthly",
-    daysOverdue: "12 days",
-    price: "$10.99",
-    imageUrl: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=120&h=120&fit=crop&auto=format",
-  },
-  {
-    id: "overdue-4",
-    name: "Spotify Premium",
-    billingCycle: "Monthly",
-    daysOverdue: "12 days",
-    price: "$10.99",
-    imageUrl: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=120&h=120&fit=crop&auto=format",
-  },
-  {
-    id: "overdue-5",
-    name: "Spotify Premium",
-    billingCycle: "Monthly",
-    daysOverdue: "12 days",
-    price: "$10.99",
-    imageUrl: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=120&h=120&fit=crop&auto=format",
-  },
-]
+export function OverdueSubscriptionsSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("space-y-2.5", className)}>
+      <div className="flex items-center justify-between px-0.5">
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
+            Overdue Subscriptions
+          </span>
+          <h2 className="text-xl font-heading tracking-tight text-foreground md:text-xl lg:text-2xl">
+            Action Required
+          </h2>
+        </div>
+        <Skeleton className="h-5 w-20" />
+      </div>
+
+      <Card className="rounded-none border-border [--card-spacing:spacing(0)]">
+        <CardContent className="p-0">
+          <ul className="divide-y divide-border">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li key={i} className="flex items-center justify-between gap-3 p-4">
+                <Skeleton className="size-10 shrink-0 md:size-12" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/5" />
+                  <Skeleton className="h-3 w-2/5" />
+                </div>
+                <div className="flex flex-col items-end space-y-1.5">
+                  <Skeleton className="h-3 w-14" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 
 function SubscriptionLogo({ src, alt, name }: { src: string; alt: string; name: string }) {
   const [hasError, setHasError] = React.useState(false)
@@ -75,27 +76,65 @@ function SubscriptionLogo({ src, alt, name }: { src: string; alt: string; name: 
 
   return (
     <div className="relative size-10 shrink-0 overflow-hidden rounded-none border border-border bg-muted md:size-12">
-      <img
-        src={src}
-        alt={alt}
-        onError={() => setHasError(true)}
-        className="size-full rounded-none object-cover"
-      />
+      <Image src={src} alt={alt} fill className="rounded-none object-cover" onError={() => setHasError(true)} />
     </div>
   )
 }
 
 export function OverdueSubscriptions({
-  subscriptions = DEFAULT_OVERDUE_SUBSCRIPTIONS,
+  subscriptions = [],
+  isLoading = false,
   className,
 }: OverdueSubscriptionsProps) {
-  if (subscriptions.length === 0) {
-    return null
+  const overdueItems: OverdueSubscriptionItem[] = React.useMemo(() => {
+    if (!subscriptions || subscriptions.length === 0) return []
+
+    const firstItem = subscriptions[0] as Record<string, unknown>
+    if ("service_name" in firstItem && "next_due_date" in firstItem) {
+      const { overdueItems: items } = getOverdueSubscriptions(subscriptions as Subscription[])
+      return items
+    }
+
+    return subscriptions as OverdueSubscriptionItem[]
+  }, [subscriptions])
+
+  if (isLoading) {
+    return <OverdueSubscriptionsSkeleton className={className} />
+  }
+
+  if (overdueItems.length === 0) {
+    return (
+      <div className={cn("space-y-2.5", className)}>
+        <div className="flex items-center justify-between px-0.5">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
+              Overdue Subscriptions
+            </span>
+            <h2 className="text-xl font-heading tracking-tight text-foreground md:text-xl lg:text-2xl">
+              Action Required
+            </h2>
+          </div>
+        </div>
+
+        <Card className="rounded-none border-border [--card-spacing:spacing(0)]">
+          <CardContent className="max-h-72 overflow-y-auto p-0">
+            <div className="flex h-44 flex-col items-center justify-center gap-2.5 p-6 text-center">
+              <CheckCheck className="size-7 stroke-[1.25] text-success" aria-hidden="true" />
+              <p className="text-base font-heading font-medium leading-normal text-foreground md:text-md lg:text-lg">
+                You&apos;re all caught up!
+              </p>
+              <p className="text-xs font-normal leading-relaxed text-muted-foreground md:text-xs lg:text-sm">
+                No overdue subscriptions detected. Great job!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className={cn("space-y-2.5", className)}>
-      {/* Header section outside of card */}
       <div className="flex items-center justify-between px-0.5">
         <div>
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
@@ -105,8 +144,8 @@ export function OverdueSubscriptions({
             Action Required
           </h2>
         </div>
-        <Badge variant="outline" className="rounded-none border-destructive text-xs font-semibold text-destructive">
-          {subscriptions.length} Overdue
+        <Badge variant="outline" className="rounded-none border-destructive text-xs font-medium text-destructive">
+          {overdueItems.length} Overdue
         </Badge>
       </div>
 
@@ -114,13 +153,12 @@ export function OverdueSubscriptions({
       <Card className="rounded-none border-border [--card-spacing:spacing(0)]">
         <CardContent className="max-h-72 overflow-y-auto p-0">
           <ul className="divide-y divide-border">
-            {subscriptions.map((sub) => (
+            {overdueItems.map((sub) => (
               <li
                 key={sub.id}
                 className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/50"
               >
                 <SubscriptionLogo src={sub.imageUrl} alt={`${sub.name} logo`} name={sub.name} />
-                {/* Left side: Subscription Name & Billing Cycle */}
                 <div className="min-w-0 flex-1 space-y-1">
                   <h4 className="truncate text-sm font-semibold leading-tight text-foreground md:text-base lg:text-base">
                     {sub.name}
@@ -130,11 +168,10 @@ export function OverdueSubscriptions({
                   </p>
                 </div>
 
-                {/* Right side: Days overdue & price */}
                 <div className="flex shrink-0 items-center gap-3 md:gap-4">
                   <div className="flex flex-col items-end space-y-0.5 text-right">
-                    <span className="text-xs font-medium text-destructive md:text-xs lg:text-sm">
-                      {typeof sub.daysOverdue === "number" ? `${sub.daysOverdue} days overdue` : sub.daysOverdue}
+                    <span className="text-xs font-normal text-destructive md:text-xs lg:text-sm">
+                      {sub.daysOverdue}
                     </span>
                     <span className="text-sm font-bold text-foreground md:text-base lg:text-base tabular-nums">
                       {sub.price}
