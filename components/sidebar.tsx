@@ -96,7 +96,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
                   Display Name:
                 </div>
                 <div className="col-span-2 truncate">
-                  {profile.display_name || user.user_metadata?.display_name || "N/A"}
+                  {profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || "N/A"}
                 </div>
 
                 <div className="font-semibold text-muted-foreground">

@@ -29,13 +29,9 @@ export function OverdueSubscriptionsSkeleton({ className }: { className?: string
   return (
     <div className={cn("space-y-2.5", className)}>
       <div className="flex items-center justify-between px-0.5">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
-            Overdue Subscriptions
-          </span>
-          <h2 className="text-xl font-heading tracking-tight text-foreground md:text-xl lg:text-2xl">
-            Action Required
-          </h2>
+        <div className="space-y-1">
+          <Skeleton className="h-3.5 w-32 md:h-4" />
+          <Skeleton className="h-6 w-36 md:h-7" />
         </div>
         <Skeleton className="h-5 w-20" />
       </div>

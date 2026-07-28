@@ -169,12 +169,13 @@ function getTimeBasedGreeting(): string {
 
 function DashboardPanel({ user, profile, analytics, subscriptions }: DashboardPanelProps) {
   const greeting = getTimeBasedGreeting()
+  const displayName = profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name
 
   return (
     <div className="flex flex-col gap-4 p-4 md:p-6 overflow-y-auto pb-8">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl">
-          {greeting}, {profile?.display_name || user.user_metadata?.display_name || "Hey there!"}!
+          {displayName ? `${greeting}, ${displayName}!` : `${greeting}!`}
         </h1>
       </div>
       <DashboardMetrics
