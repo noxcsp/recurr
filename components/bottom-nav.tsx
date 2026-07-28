@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { DashboardMetrics } from "@/components/dashboard-metrics"
+import { OverdueSubscriptions } from "@/components/overdue-subscriptions"
 
 // Nav height in px — shared with AddFAB so the button clears the bar exactly
 export const NAV_HEIGHT_PX = 72
@@ -163,6 +164,7 @@ function DashboardPanel({ user, profile, spendTrend = "down" }: DashboardPanelPr
         </h1>
       </div>
       <DashboardMetrics spendTrend={spendTrend} />
+      <OverdueSubscriptions />
     </div>
   )
 }
