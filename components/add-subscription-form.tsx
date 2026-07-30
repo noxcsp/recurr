@@ -49,8 +49,6 @@ import {
   Gamepad2,
   CheckCircle2,
   Search,
-  Tag,
-  Filter,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -140,9 +138,6 @@ export function AddSubscriptionForm({
       : []),
   ]
 
-  // Stable date reference created once on mount via lazy useState initializer
-  const [fallbackDate] = useState(() => new Date())
-
   // Adjust local state during render when open prop/state changes to avoid cascading renders in useEffect
   const [prevOpen, setPrevOpen] = useState(open)
   if (open !== prevOpen) {
@@ -154,20 +149,6 @@ export function AddSubscriptionForm({
       setError(null)
     }
   }
-
-  // Reset wizard store state when dialog opens
-  useEffect(() => {
-    if (open) {
-      const parsedDate = defaultDate ? parseUtcToLocalDate(defaultDate) : undefined
-      resetWizard(
-        {
-          next_due_date: parsedDate,
-          payment_mode: PREDEFINED_PAYMENT_METHODS[0].label,
-        },
-        !!defaultDate
-      )
-    }
-  }, [open, defaultDate, resetWizard])
 
   // Handler for opening/closing dialog (updates state in response to user events)
   const handleOpenChange = (newOpen: boolean) => {
@@ -197,7 +178,6 @@ export function AddSubscriptionForm({
       draftData.is_trial,
       draftData.trial_end_date,
       draftData.subscription_status,
-      fallbackDate,
     ]
   )
 
@@ -700,7 +680,7 @@ export function AddSubscriptionForm({
                               <Wallet className="size-4 text-foreground" />
                             )}
                           </div>
-                          {isSelected && <Check className="size-3.5 text-foreground stroke-[3]" />}
+                          {isSelected && <Check className="size-3.5 text-foreground stroke-3" />}
                         </div>
                         <div>
                           <div className="text-xs font-semibold text-foreground">
@@ -756,7 +736,7 @@ export function AddSubscriptionForm({
                       >
                         <div className="flex items-center justify-between w-full mb-1">
                           <Clock className="size-4 text-foreground" />
-                          {isSelected && <Check className="size-3.5 text-foreground stroke-[3]" />}
+                          {isSelected && <Check className="size-3.5 text-foreground stroke-3" />}
                         </div>
                         <div>
                           <div className="text-xs font-semibold text-foreground">
