@@ -32,6 +32,9 @@ Before starting any feature implementation, debugging, or test creation, you MUS
 - Always refer to the [Supabase Documentation](https://supabase.com/docs) for the latest best practices and documentation.
 - Utilize Supabase MCP for all database interactions.
 
+## State Management (Zustand)
+- Always refer to the [Zustand Documentation](https://zustand.docs.pmnd.rs/) for the latest best practices and documentation.
+
 # Workflow & Testing Mandate
 - Write comprehensive unit tests for all critical utility functions and complex UI components before marking a task complete.
 - Mock Supabase clients, Vercel edge functions, and external APIs in all test suites.
