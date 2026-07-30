@@ -21,6 +21,7 @@ export async function addSubscription(data: SubscriptionFormValues) {
   const { error } = await supabase.from("subscriptions").insert({
     user_id: userData.user.id,
     service_name: validated.data.service_name,
+    category: validated.data.category || "Other",
     cost: validated.data.cost,
     plan_type: validated.data.plan_type,
     payment_mode: validated.data.payment_mode,
@@ -61,6 +62,7 @@ export async function updateSubscription(
     .from("subscriptions")
     .update({
       service_name: validated.data.service_name,
+      category: validated.data.category || "Other",
       cost: validated.data.cost,
       plan_type: validated.data.plan_type,
       payment_mode: validated.data.payment_mode,

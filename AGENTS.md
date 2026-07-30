@@ -16,7 +16,7 @@ Before starting any feature implementation, debugging, or test creation, you MUS
 - Always refer to the [Next.js Documentation](https://nextjs.org/docs) for the latest best practices and documentation.
 
 ## Styling & UI (Shadcn + Framer Motion)
-- Utilize Shadcn UI as the foundation for all interface components.
+- Utilize Shadcn UI as the foundation for all interface components using the Shadcn MCP
 - Take full initiative in the design phase. Generate complete, polished component stylings using Shadcn and Tailwind CSS so the developer can focus strictly on frontend and backend logic integration.
 - Implement Framer Motion for fluid layout animations, page transitions, and micro-interactions, ensuring animations respect user accessibility preferences (prefers-reduced-motion).
 

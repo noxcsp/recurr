@@ -26,6 +26,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Stepper, type StepItem } from "@/components/ui/stepper"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Plus,
   X,
   ChevronRight,
@@ -41,6 +48,9 @@ import {
   Cloud,
   Gamepad2,
   CheckCircle2,
+  Search,
+  Tag,
+  Filter,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -58,6 +68,9 @@ import {
   type ServicePlan,
 } from "@/lib/constants/subscription-templates"
 import { useSubscriptionWizardStore } from "@/lib/store/use-subscription-wizard-store"
+import { SUBSCRIPTION_CATEGORIES } from "@/lib/constants/categories"
+
+const CATEGORY_OPTIONS = ["All", ...SUBSCRIPTION_CATEGORIES]
 
 interface AddSubscriptionFormProps {
   defaultDate?: Date
@@ -79,6 +92,28 @@ export function AddSubscriptionForm({
 
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All")
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const filteredTemplates = useMemo(() => {
+    return PREDEFINED_SUBSCRIPTIONS.filter((tpl) => {
+      const matchesCategory =
+        selectedCategoryFilter === "All" || tpl.category === selectedCategoryFilter
+      const matchesSearch =
+        debouncedSearchQuery.trim() === "" ||
+        tpl.service_name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        tpl.category.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+      return matchesCategory && matchesSearch
+    })
+  }, [selectedCategoryFilter, debouncedSearchQuery])
 
   // Zustand Store
   const {
@@ -108,19 +143,34 @@ export function AddSubscriptionForm({
   // Stable date reference created once on mount via lazy useState initializer
   const [fallbackDate] = useState(() => new Date())
 
-  // Handler for opening/closing dialog (updates state in response to user events)
-  const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen) {
-      const parsedDate = defaultDate ? parseUtcToLocalDate(defaultDate) : new Date()
+  // Adjust local state during render when open prop/state changes to avoid cascading renders in useEffect
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
+      setSearchQuery("")
+      setDebouncedSearchQuery("")
+      setSelectedCategoryFilter("All")
+      setError(null)
+    }
+  }
+
+  // Reset wizard store state when dialog opens
+  useEffect(() => {
+    if (open) {
+      const parsedDate = defaultDate ? parseUtcToLocalDate(defaultDate) : undefined
       resetWizard(
         {
           next_due_date: parsedDate,
           payment_mode: PREDEFINED_PAYMENT_METHODS[0].label,
         },
-        isCalendarTriggered
+        !!defaultDate
       )
-      setError(null)
     }
+  }, [open, defaultDate, resetWizard])
+
+  // Handler for opening/closing dialog (updates state in response to user events)
+  const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
   }
 
@@ -128,16 +178,18 @@ export function AddSubscriptionForm({
   const formValues = useMemo<SubscriptionFormValues>(
     () => ({
       service_name: draftData.service_name || "",
+      category: draftData.category || "Other",
       cost: draftData.cost || 0,
       plan_type: (draftData.plan_type as "Weekly" | "Monthly" | "Annual") || "Monthly",
       payment_mode: draftData.payment_mode || "",
-      next_due_date: draftData.next_due_date || fallbackDate,
+      next_due_date: draftData.next_due_date || (undefined as unknown as Date),
       is_trial: draftData.is_trial || false,
       trial_end_date: draftData.trial_end_date || undefined,
       subscription_status: draftData.subscription_status || "unpaid",
     }),
     [
       draftData.service_name,
+      draftData.category,
       draftData.cost,
       draftData.plan_type,
       draftData.payment_mode,
@@ -180,18 +232,29 @@ export function AddSubscriptionForm({
   const handleFinalSubmit = () => {
     setError(null)
 
+    const resolvedDueDate =
+      draftData.next_due_date ||
+      (defaultDate ? parseUtcToLocalDate(defaultDate) : undefined)
+
+    if (!resolvedDueDate) {
+      setError("Please select a next due date.")
+      if (!isCalendarTriggered) setStep(5)
+      return
+    }
+
     const calculatedStatus = computeSubscriptionStatus(
-      draftData.next_due_date,
+      resolvedDueDate,
       draftData.isStartedToday
     )
 
     // Form final validation check
     const finalValues: SubscriptionFormValues = {
       service_name: draftData.service_name || "",
+      category: draftData.category || "Other",
       cost: Number(draftData.cost) || 0,
       plan_type: (draftData.plan_type as "Weekly" | "Monthly" | "Annual") || "Monthly",
       payment_mode: draftData.payment_mode || "Other",
-      next_due_date: draftData.next_due_date ? toUtcDate(draftData.next_due_date)! : new Date(),
+      next_due_date: toUtcDate(resolvedDueDate)!,
       is_trial: !!draftData.is_trial,
       trial_end_date: draftData.is_trial && draftData.trial_end_date
         ? toUtcDate(draftData.trial_end_date)
@@ -242,6 +305,11 @@ export function AddSubscriptionForm({
     } else if (currentStep === 3) {
       if (!draftData.payment_mode) {
         setError("Please select a payment method.")
+        return
+      }
+    } else if (currentStep === 5 && !isCalendarTriggered) {
+      if (!draftData.next_due_date) {
+        setError("Please select a next due date.")
         return
       }
     }
@@ -347,8 +415,112 @@ export function AddSubscriptionForm({
                   </p>
                 </div>
 
+                {/* Search & Category Filter */}
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search services or categories..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 rounded-none text-xs md:text-sm"
+                    />
+                  </div>
+
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                    {CATEGORY_OPTIONS.map((cat) => {
+                      const active = selectedCategoryFilter === cat
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedCategoryFilter(cat)}
+                          className={`shrink-0 px-2.5 py-1 text-[11px] font-medium border rounded-none transition-colors ${
+                            active
+                              ? "bg-foreground text-background border-foreground font-semibold"
+                              : "border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Name Field if Custom is Selected */}
+                {draftData.selectedServiceId === "custom" && (
+                  <div className="space-y-3 pt-2 border-t border-border">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-foreground md:text-sm">
+                        Custom Service Name
+                      </Label>
+                      <Input
+                        placeholder="e.g. Adobe Creative Cloud, Gym Membership"
+                        value={draftData.service_name || ""}
+                        onChange={(e) => updateDraft({ service_name: e.target.value })}
+                        className="rounded-none text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-foreground md:text-sm">
+                        Category
+                      </Label>
+                      <Select
+                        value={draftData.category || "Other"}
+                        onValueChange={(val) => updateDraft({ category: val ?? undefined })}
+                      >
+                        <SelectTrigger className="w-full rounded-none text-sm">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent disablePortal alignItemWithTrigger={true}>
+                          {SUBSCRIPTION_CATEGORIES.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
-                  {PREDEFINED_SUBSCRIPTIONS.map((template) => {
+                  {/* Custom Option / Manual Input at the top */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateDraft({
+                        selectedServiceId: "custom",
+                        service_name: draftData.selectedServiceId === "custom" ? draftData.service_name : "",
+                        category: draftData.category || "Other",
+                        selectedPlanId: undefined,
+                      })
+                    }}
+                    className={`group relative flex flex-col items-start justify-between p-3.5 border transition-all text-left rounded-none ${draftData.selectedServiceId === "custom"
+                        ? "border-foreground bg-accent/40 ring-1 ring-foreground"
+                        : "border-dashed border-border hover:border-foreground/50 hover:bg-muted/30"
+                      }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="p-1.5 border border-border bg-background">
+                        <Edit3 className="size-5 text-foreground" />
+                      </div>
+                      {draftData.selectedServiceId === "custom" && (
+                        <CheckCircle2 className="size-4 text-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-foreground md:text-sm">
+                        Custom Service
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Enter manually
+                      </div>
+                    </div>
+                  </button>
+
+                  {filteredTemplates.map((template) => {
                     const isSelected = draftData.selectedServiceId === template.id
                     return (
                       <button
@@ -359,6 +531,7 @@ export function AddSubscriptionForm({
                           updateDraft({
                             selectedServiceId: template.id,
                             service_name: template.service_name,
+                            category: template.category,
                             selectedPlanId: firstPlan?.id,
                             cost: firstPlan?.cost || 0,
                             plan_type: firstPlan?.plan_type || "Monthly",
@@ -388,55 +561,7 @@ export function AddSubscriptionForm({
                       </button>
                     )
                   })}
-
-                  {/* Custom Option */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateDraft({
-                        selectedServiceId: "custom",
-                        service_name: draftData.selectedServiceId === "custom" ? draftData.service_name : "",
-                        selectedPlanId: undefined,
-                      })
-                    }}
-                    className={`group relative flex flex-col items-start justify-between p-3.5 border transition-all text-left rounded-none ${draftData.selectedServiceId === "custom"
-                        ? "border-foreground bg-accent/40 ring-1 ring-foreground"
-                        : "border-dashed border-border hover:border-foreground/50 hover:bg-muted/30"
-                      }`}
-                  >
-                    <div className="flex items-center justify-between w-full mb-2">
-                      <div className="p-1.5 border border-border bg-background">
-                        <Edit3 className="size-5 text-foreground" />
-                      </div>
-                      {draftData.selectedServiceId === "custom" && (
-                        <CheckCircle2 className="size-4 text-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold text-foreground md:text-sm">
-                        Custom Service
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        Enter manually
-                      </div>
-                    </div>
-                  </button>
                 </div>
-
-                {/* Custom Name Field if Custom is Selected */}
-                {draftData.selectedServiceId === "custom" && (
-                  <div className="space-y-2 pt-2 border-t border-border">
-                    <Label className="text-xs font-medium text-foreground md:text-sm">
-                      Custom Service Name
-                    </Label>
-                    <Input
-                      placeholder="e.g. Adobe Creative Cloud, Gym Membership"
-                      value={draftData.service_name || ""}
-                      onChange={(e) => updateDraft({ service_name: e.target.value })}
-                      className="rounded-none text-sm"
-                    />
-                  </div>
-                )}
               </div>
             )}
 
@@ -709,6 +834,7 @@ export function AddSubscriptionForm({
                           next_due_date: date,
                           isStartedToday: false,
                         })
+                        if (date) setError(null)
                       }}
                     />
                   </div>
@@ -727,6 +853,7 @@ export function AddSubscriptionForm({
                             next_due_date: todayDate,
                             subscription_status: "paid",
                           })
+                          setError(null)
                         } else {
                           const resetDate = defaultDate ? parseUtcToLocalDate(defaultDate) : undefined
                           updateDraft({
@@ -767,6 +894,12 @@ export function AddSubscriptionForm({
                     <span className="text-muted-foreground">Service:</span>
                     <div className="font-semibold text-foreground">
                       {draftData.service_name || "Not specified"}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Category:</span>
+                    <div className="font-medium text-foreground">
+                      {draftData.category || selectedTemplate?.category || "Other"}
                     </div>
                   </div>
                   <div>

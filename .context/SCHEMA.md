@@ -56,6 +56,7 @@ Stores active and upcoming subscriptions.
 | `id` | `uuid` | Primary Key, Default: `gen_random_uuid()` | Subscription identifier. |
 | `user_id` | `uuid` | Foreign Key (`public.profiles.id` ON DELETE CASCADE) | Subscription owner. |
 | `service_name` | `text` | NOT NULL | Service title (e.g. "Netflix", "Spotify"). |
+| `category` | `text` | NOT NULL, Default: `'Other'` | Service category (e.g. "Entertainment", "Music", "Productivity"). |
 | `cost` | `numeric` | NOT NULL, Check: `cost >= 0` | Subscription cost amount. |
 | `plan_type` | `text` | NOT NULL, Check: `Weekly`, `Monthly`, `Annual` | Renewal frequency. |
 | `payment_mode` | `text` | NOT NULL | Payment method name. |
@@ -67,7 +68,7 @@ Stores active and upcoming subscriptions.
 | `updated_at` | `timestamptz` | Default: `timezone('utc'::text, now())` | Update timestamp. |
 
 #### Indexes & RLS
-*   **Indexes**: `idx_subscriptions_user_id`, `idx_subscriptions_next_due_date`, `idx_subscriptions_due_status`
+*   **Indexes**: `idx_subscriptions_user_id`, `idx_subscriptions_next_due_date`, `idx_subscriptions_due_status`, `idx_subscriptions_category`
 *   **RLS**: Enabled (`SELECT`, `INSERT`, `UPDATE`, `DELETE` for `auth.uid() = user_id`).
 
 ---

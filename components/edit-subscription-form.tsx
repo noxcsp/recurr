@@ -35,12 +35,20 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DatePicker } from "@/components/ui/date-picker"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Trash2 } from "lucide-react"
 
 import { updateSubscription, deleteSubscription } from "@/app/home/actions"
 import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 import { Subscription } from "@/types/subscriptions"
 import { parseUtcToLocalDate, toUtcDate } from "@/lib/utils/date"
+import { SUBSCRIPTION_CATEGORIES } from "@/lib/constants/categories"
 
 interface EditSubscriptionFormProps {
   subscription: Subscription
@@ -63,6 +71,7 @@ export function EditSubscriptionForm({
     mode: "onChange",
     defaultValues: {
       service_name: subscription.service_name,
+      category: subscription.category || "Other",
       cost: subscription.cost,
       plan_type: subscription.plan_type as "Weekly" | "Monthly" | "Annual",
       payment_mode: subscription.payment_mode,
@@ -78,6 +87,7 @@ export function EditSubscriptionForm({
   useEffect(() => {
     form.reset({
       service_name: subscription.service_name,
+      category: subscription.category || "Other",
       cost: subscription.cost,
       plan_type: subscription.plan_type as "Weekly" | "Monthly" | "Annual",
       payment_mode: subscription.payment_mode,
@@ -226,6 +236,35 @@ export function EditSubscriptionForm({
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. Netflix, Spotify" {...field} />
+                      </FormControl>
+                      <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-sm font-medium leading-none md:text-sm lg:text-base">
+                        Category
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value || "Other"}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="w-full rounded-none">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SUBSCRIPTION_CATEGORIES.map((cat) => (
+                              <SelectItem key={cat} value={cat}>
+                                {cat}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage className="text-xs font-normal leading-normal text-destructive md:text-xs lg:text-sm" />
                     </FormItem>

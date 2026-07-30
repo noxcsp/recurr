@@ -3,6 +3,7 @@ import { z } from "zod"
 export const subscriptionSchema = z
   .object({
     service_name: z.string().min(1, "Service name is required."),
+    category: z.string().min(1, "Category is required.").default("Other"),
     cost: z
       .union([z.number(), z.string()])
       .transform((val) => (val === "" ? undefined : Number(val)))

@@ -22,6 +22,7 @@ interface SubscriptionWizardState {
 
 const INITIAL_DRAFT: WizardDraftData = {
   service_name: "",
+  category: "Entertainment",
   cost: 0,
   plan_type: "Monthly",
   payment_mode: "",
