@@ -328,7 +328,7 @@ export function AddSubscriptionForm({
           </CardHeader>
 
           {/* Wizard Content Body */}
-          <CardContent className="py-4 space-y-4 overflow-y-auto min-h-0 flex-1 px-4 sm:px-6">
+          <CardContent className="space-y-4 overflow-y-auto min-h-0 flex-1 px-4 sm:px-6 ">
             {error && (
               <div className="border border-destructive p-3 text-xs font-medium leading-normal text-destructive rounded-none">
                 {error}
