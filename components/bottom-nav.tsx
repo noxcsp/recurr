@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { LayoutDashboard, CalendarDays, List, Settings, LogOut, Loader2, Trash2, AlertTriangle } from "lucide-react"
+import { LayoutDashboard, CalendarDays, List, Settings, LogOut, Loader2, Trash2, AlertTriangle, ArrowDown, ArrowUp, RotateCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MobileCalendar } from "@/components/mobile-calendar"
 import { SubscriptionList } from "@/components/subscription-list"
@@ -14,11 +14,10 @@ import { deleteAccount, signout } from "@/app/auth/actions"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/profiles"
 import type { Subscription } from "@/types/subscriptions"
+import type { DashboardAnalytics } from "@/types/analytics"
 import { NotificationPopover } from "@/components/notification-panel"
-import { SuccessScreen } from "@/components/success-screen"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -27,6 +26,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { DashboardMetrics } from "@/components/dashboard-metrics"
+import { OverdueSubscriptions } from "@/components/overdue-subscriptions"
 
 // Nav height in px — shared with AddFAB so the button clears the bar exactly
 export const NAV_HEIGHT_PX = 72
@@ -37,9 +38,10 @@ interface BottomNavProps {
   user: User
   profile: Profile | null
   subscriptions: Subscription[]
+  analytics?: DashboardAnalytics
 }
 
-export function BottomNav({ user, subscriptions }: BottomNavProps) {
+export function BottomNav({ user, profile, subscriptions, analytics }: BottomNavProps) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard")
 
   return (
@@ -54,7 +56,9 @@ export function BottomNav({ user, subscriptions }: BottomNavProps) {
 
       {/* Tab content — fills all space above navbar */}
       <main className="min-h-0 flex-1 overflow-y-auto">
-        {activeTab === "dashboard" && <DashboardPanel />}
+        {activeTab === "dashboard" && (
+          <DashboardPanel user={user} profile={profile} analytics={analytics} subscriptions={subscriptions} />
+        )}
         {activeTab === "calendar" && (
           <MobileCalendar subscriptions={subscriptions} />
         )}
@@ -149,20 +153,43 @@ function NavTab({ id, label, icon, active, onClick, isLast = false }: NavTabProp
 
 // ── Tab panels ────────────────────────────────────────────────────────────────
 
-function DashboardPanel() {
+interface DashboardPanelProps {
+  user: User
+  profile: Profile | null
+  analytics?: DashboardAnalytics
+  subscriptions: Subscription[]
+}
+
+function getTimeBasedGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 18) return "Good afternoon"
+  return "Good evening"
+}
+
+function DashboardPanel({ user, profile, analytics, subscriptions }: DashboardPanelProps) {
+  const greeting = getTimeBasedGreeting()
+  const displayName = profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name
+
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-      <LayoutDashboard
-        strokeWidth={1.25}
-        className="size-10 text-muted-foreground"
-        aria-hidden="true"
+    <div className="flex flex-col gap-4 p-4 md:p-6 overflow-y-auto pb-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl">
+          {displayName ? `${greeting}, ${displayName}!` : `${greeting}!`}
+        </h1>
+      </div>
+      <DashboardMetrics
+        monthlySpend={analytics?.monthlySpend}
+        spendTrend={analytics?.spendTrend}
+        trendPercentage={analytics?.trendPercentage}
+        trendLabel={analytics?.trendLabel}
+        activeSubscriptionsCount={analytics?.activeSubscriptionsCount}
+        dueThisWeekCount={analytics?.dueThisWeekCount}
+        topSubscriptionName={analytics?.topSubscriptionName}
+        topSubscriptionCost={analytics?.topSubscriptionCost}
+        topSubscriptionBillingCycle={analytics?.topSubscriptionBillingCycle}
       />
-      <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl">
-        Dashboard
-      </h1>
-      <p className="text-sm font-normal leading-relaxed text-muted-foreground md:text-base lg:text-base">
-        Coming soon — your overview will appear here.
-      </p>
+      <OverdueSubscriptions subscriptions={subscriptions} />
     </div>
   )
 }

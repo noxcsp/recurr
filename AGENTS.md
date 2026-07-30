@@ -13,6 +13,7 @@ Before starting any feature implementation, debugging, or test creation, you MUS
 - Default to React Server Components (RSC). Only use Client Components ("use client") when absolutely necessary for interactivity, hooks, or Framer Motion.
 - Optimize all data fetching for Vercel deployment, utilizing Next.js caching and revalidation appropriately.
 - Ensure strict handling of environment variables for local and Vercel production environments.
+- Always refer to the [Next.js Documentation](https://nextjs.org/docs) for the latest best practices and documentation.
 
 ## Styling & UI (Shadcn + Framer Motion)
 - Utilize Shadcn UI as the foundation for all interface components.
@@ -28,6 +29,8 @@ Before starting any feature implementation, debugging, or test creation, you MUS
 - Always write queries with Row Level Security (RLS) constraints in mind.
 - Always write indexes for queries that will be run frequently.
 - Utilize strict TypeScript definitions generated directly from the Supabase schema.
+- Always refer to the [Supabase Documentation](https://supabase.com/docs) for the latest best practices and documentation.
+- Utilize Supabase MCP for all database interactions.
 
 # Workflow & Testing Mandate
 - Write comprehensive unit tests for all critical utility functions and complex UI components before marking a task complete.
