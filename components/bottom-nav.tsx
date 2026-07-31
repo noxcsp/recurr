@@ -37,7 +37,7 @@ export function BottomNav() {
       </main>
 
       {/* Floating Add Button — above the nav, bottom-right */}
-      {activeTab === "dashboard" ? <AddFAB bottomOffset={NAV_HEIGHT_PX} /> : null}
+      {activeTab === "dashboard" || activeTab === "subscriptions" ? <AddFAB bottomOffset={NAV_HEIGHT_PX} /> : null}
 
       {/* Bottom navbar — 4 equal tabs with vertical separators */}
       <nav
