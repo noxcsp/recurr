@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { Bell, BellOff, AlertCircle, ShieldAlert, CalendarDays } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"

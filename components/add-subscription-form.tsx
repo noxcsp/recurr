@@ -50,7 +50,7 @@ import {
   CheckCircle2,
   Search,
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 
 import { addSubscription } from "@/app/home/actions"
 import {
