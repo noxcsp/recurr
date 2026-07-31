@@ -5,16 +5,24 @@ import { useRouter } from "next/navigation"
 import { DailySwipeoff } from "@/components/daily-swipeoff"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import type { Subscription } from "@/types/subscriptions"
+import type { User } from "@supabase/supabase-js"
+import type { Profile } from "@/types/profiles"
+import type { DashboardAnalytics } from "@/types/analytics"
+import { HomeDataProvider } from "@/contexts/home-data-context"
 
 interface HomeClientProps {
   todayDateStr: string
   lastSwipeoffDate: string | null
+  user: User
+  profile: Profile | null
   subscriptions: Subscription[]
+  analytics?: DashboardAnalytics
   children: React.ReactNode
 }
 
 /**
- * Client-side wrapper that gates the Daily Swipe-off overlay.
+ * Client-side wrapper that gates the Daily Swipe-off overlay
+ * and provides HomeDataContext to all child components.
  *
  * Shows the swipe-off when:
  *   1. There are subscriptions due today (matched by next_due_date)
@@ -26,7 +34,10 @@ interface HomeClientProps {
 export function HomeClient({
   todayDateStr,
   lastSwipeoffDate,
+  user,
+  profile,
   subscriptions,
+  analytics,
   children,
 }: HomeClientProps) {
   const router = useRouter()
@@ -73,6 +84,16 @@ export function HomeClient({
     )
   }
 
-  // Swipe-off done or not needed — render the home content
-  return <>{children}</>
+  // Swipe-off done or not needed — render the home content wrapped in HomeDataProvider
+  return (
+    <HomeDataProvider
+      user={user}
+      profile={profile}
+      subscriptions={subscriptions}
+      analytics={analytics}
+    >
+      {children}
+    </HomeDataProvider>
+  )
 }
+

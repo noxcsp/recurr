@@ -56,15 +56,13 @@ export default async function HomePage() {
     <HomeClient
       todayDateStr={todayDateStr}
       lastSwipeoffDate={profile?.last_swipeoff_date ?? null}
+      user={user}
+      profile={profile}
       subscriptions={subscriptions}
+      analytics={analytics}
     >
       {/* Mobile layout — bottom navbar (hidden on lg and above) */}
-      <BottomNav
-        user={user}
-        profile={profile}
-        subscriptions={subscriptions}
-        analytics={analytics}
-      />
+      <BottomNav />
 
       {/* Desktop layout — sidebar + calendar (hidden below lg) */}
       <div className="hidden h-screen overflow-hidden bg-background lg:flex">
