@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Subscription } from "@/types/subscriptions"
 import { RefreshCw, Trash2, RotateCcw, Check, X, Zap } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { cancelSubscription, renewSubscription } from "@/app/home/actions"
 import { parseUtcToLocalDate } from "@/lib/utils/date"
@@ -266,16 +266,24 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
             onClick={() => setEditDialogOpen(true)}
           >
             <div className="space-y-0.5">
-              <div className="text-sm font-semibold text-foreground md:text-base lg:text-base">
+              <div className="text-sm font-heading font-semibold text-foreground md:text-base lg:text-base">
                 {sub.service_name}
               </div>
               <div className="text-[11px] text-muted-foreground md:text-xs lg:text-xs">
-                {sub.payment_mode}
+                {sub.category}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs font-bold text-foreground md:text-sm lg:text-sm">
-                ₱{sub.cost.toLocaleString()}
+              <div className="flex items-baseline justify-end gap-0.5 text-xs font-medium text-foreground md:text-sm lg:text-sm">
+                <span>{formatCurrency(sub.cost)}</span>
+                <span className="text-xs font-normal text-muted-foreground md:text-xs lg:text-xs">
+                  |
+                </span>
+                {sub.payment_mode && (
+                  <span className="text-[11px] font-normal text-muted-foreground md:text-xs lg:text-xs">
+                    {sub.payment_mode}
+                  </span>
+                )}
               </div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide md:text-xs lg:text-xs">
                 / {sub.plan_type.toLowerCase()}{isTrial ? " after trial" : ""}
