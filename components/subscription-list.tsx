@@ -109,6 +109,13 @@ function getStatusBadge(sub: Subscription): StatusBadgeInfo | null {
     }
   }
 
+  if(sub.subscription_status === "overdue") {
+    return {
+      label: "Overdue",
+      className: "bg-destructive/10 border-transparent text-destructive",
+    }
+  }
+
   const dueDays = getDaysRemaining(sub.next_due_date)
   if (dueDays <= 3) {
     return {
@@ -545,9 +552,17 @@ export function SubscriptionList({ subscriptions, emptyMessage }: SubscriptionLi
     )
   }
 
+  const sortedSubscriptions = [...subscriptions].sort((a, b) => {
+    const dateStrA = a.is_trial && a.trial_end_date ? a.trial_end_date : a.next_due_date
+    const dateStrB = b.is_trial && b.trial_end_date ? b.trial_end_date : b.next_due_date
+    const timeA = dateStrA ? (parseUtcToLocalDate(dateStrA)?.getTime() ?? Infinity) : Infinity
+    const timeB = dateStrB ? (parseUtcToLocalDate(dateStrB)?.getTime() ?? Infinity) : Infinity
+    return timeA - timeB
+  })
+
   return (
     <ul className="flex flex-col gap-3">
-      {subscriptions.map((sub) => (
+      {sortedSubscriptions.map((sub) => (
         <SubscriptionCard key={sub.id} sub={sub} />
       ))}
     </ul>

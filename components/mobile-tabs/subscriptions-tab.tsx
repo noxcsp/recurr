@@ -5,17 +5,46 @@ import { SubscriptionList } from "@/components/subscription-list"
 import { Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { SUBSCRIPTION_CATEGORIES } from "@/lib/constants/categories"
 import { useEffect, useState, useMemo } from "react"
+import type { Subscription } from "@/types/subscriptions"
 
-const CATEGORY_OPTIONS = ["All", ...SUBSCRIPTION_CATEGORIES]
+const STATUS_OPTIONS = [
+  "All",
+  "Active",
+  "Upcoming",
+  "Overdue",
+  "Trial",
+  "Cancelled",
+]
+
+function checkIsTrialExpired(sub: Subscription): boolean {
+  if (!sub.is_trial || !sub.trial_end_date) return false
+  const [y, m, d] = sub.trial_end_date.split("-").map(Number)
+  if (!y || !m || !d) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const endDate = new Date(y, m - 1, d)
+  return endDate < today
+}
+
+function checkIsOverdue(sub: Subscription): boolean {
+  if (sub.subscription_status === "overdue") return true
+  if (sub.subscription_status === "paid" || sub.subscription_status === "cancelled") return false
+  if (!sub.next_due_date) return false
+  const [y, m, d] = sub.next_due_date.split("-").map(Number)
+  if (!y || !m || !d) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const dueDate = new Date(y, m - 1, d)
+  return dueDate < today
+}
 
 export function SubscriptionsTab() {
   const { subscriptions } = useHomeData()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All")
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState("All")
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,22 +55,33 @@ export function SubscriptionsTab() {
 
   const filteredSubscriptions = useMemo(() => {
     return subscriptions.filter((sub) => {
-      const matchesCategory =
-        selectedCategoryFilter === "All" || sub.category === selectedCategoryFilter
+      let matchesStatus = true
+      if (selectedStatusFilter === "Active") {
+        matchesStatus = sub.subscription_status !== "cancelled" && !checkIsTrialExpired(sub)
+      } else if (selectedStatusFilter === "Upcoming") {
+        matchesStatus = sub.subscription_status === "unpaid" && !sub.is_trial
+      } else if (selectedStatusFilter === "Overdue") {
+        matchesStatus = checkIsOverdue(sub)
+      } else if (selectedStatusFilter === "Trial") {
+        matchesStatus = Boolean(sub.is_trial)
+      } else if (selectedStatusFilter === "Cancelled") {
+        matchesStatus = sub.subscription_status === "cancelled"
+      }
 
       const query = debouncedSearchQuery.trim().toLowerCase()
       const matchesSearch =
         !query ||
         sub.service_name.toLowerCase().includes(query) ||
         sub.category.toLowerCase().includes(query) ||
-        sub.payment_mode.toLowerCase().includes(query)
+        sub.payment_mode.toLowerCase().includes(query) ||
+        sub.subscription_status.toLowerCase().includes(query)
 
-      return matchesCategory && matchesSearch
+      return matchesStatus && matchesSearch
     })
-  }, [subscriptions, selectedCategoryFilter, debouncedSearchQuery])
+  }, [subscriptions, selectedStatusFilter, debouncedSearchQuery])
 
   const hasActiveFilter =
-    selectedCategoryFilter !== "All" || searchQuery.trim().length > 0
+    selectedStatusFilter !== "All" || searchQuery.trim().length > 0
 
   const subtitle = useMemo(() => {
     if (subscriptions.length === 0) {
@@ -55,7 +95,7 @@ export function SubscriptionsTab() {
 
   const handleClearFilters = () => {
     setSearchQuery("")
-    setSelectedCategoryFilter("All")
+    setSelectedStatusFilter("All")
   }
 
   return (
@@ -67,7 +107,7 @@ export function SubscriptionsTab() {
         </h1>
       </div>
 
-      {/* Search & Category Filter */}
+      {/* Search & Status Filter */}
       <div className="flex flex-col justify-between px-4 space-y-2">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -90,23 +130,24 @@ export function SubscriptionsTab() {
         </div>
 
         <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {CATEGORY_OPTIONS.map((cat) => {
-            const active = selectedCategoryFilter === cat
+          {STATUS_OPTIONS.map((status) => {
+            const active = selectedStatusFilter === status
             return (
               <button
-                key={cat}
+                key={status}
                 type="button"
                 onClick={() =>
-                  setSelectedCategoryFilter(
-                    cat === selectedCategoryFilter && cat !== "All" ? "All" : cat
+                  setSelectedStatusFilter(
+                    status === selectedStatusFilter && status !== "All" ? "All" : status
                   )
                 }
-                className={`shrink-0 px-2.5 py-1 text-[11px] font-medium border rounded-none transition-colors ${active
-                  ? "bg-foreground text-background border-foreground font-semibold"
-                  : "border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground"
-                  }`}
+                className={`shrink-0 px-2.5 py-1 text-[11px] font-medium border rounded-none transition-colors ${
+                  active
+                    ? "bg-foreground text-background border-foreground font-semibold"
+                    : "border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground"
+                }`}
               >
-                {cat}
+                {status}
               </button>
             )
           })}
@@ -147,4 +188,3 @@ export function SubscriptionsTab() {
     </div>
   )
 }
-
