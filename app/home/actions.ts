@@ -107,3 +107,40 @@ export async function deleteSubscription(id: string) {
   revalidatePath("/home")
   return { success: true }
 }
+
+export async function renewSubscription(id: string) {
+  const supabase = await createClient()
+
+  const { data: userData, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !userData?.user) {
+    return { error: "You must be logged in to renew a subscription." }
+  }
+
+  const { data: sub, error: fetchError } = await supabase
+    .from("subscriptions")
+    .select("is_trial")
+    .eq("id", id)
+    .eq("user_id", userData.user.id)
+    .single()
+
+  if (fetchError || !sub) {
+    return { error: fetchError?.message ?? "Subscription not found." }
+  }
+
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
+      subscription_status: "paid" as const,
+      ...(sub.is_trial ? { is_trial: false, trial_end_date: null } : {}),
+    })
+    .eq("id", id)
+    .eq("user_id", userData.user.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/home")
+  return { success: true }
+}

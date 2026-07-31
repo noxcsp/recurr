@@ -214,7 +214,9 @@ function SubscriptionsPanel({ subscriptions }: { subscriptions: Subscription[] }
       </div>
 
       {/* List */}
-      <SubscriptionList subscriptions={subscriptions} />
+      <div className="p-4">
+        <SubscriptionList subscriptions={subscriptions} />
+      </div>
     </div>
   )
 }

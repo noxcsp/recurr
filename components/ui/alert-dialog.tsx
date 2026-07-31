@@ -77,7 +77,7 @@ function AlertDialogFooter({
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "flex flex-row items-center justify-end gap-2",
         className
       )}
       {...props}
@@ -136,7 +136,7 @@ function AlertDialogCancel({
       data-slot="alert-dialog-cancel"
       className={cn(
         buttonVariants({ variant: "outline" }),
-        "mt-2 sm:mt-0 rounded-none",
+        "rounded-none",
         className
       )}
       {...props}
