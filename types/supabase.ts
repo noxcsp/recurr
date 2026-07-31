@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -79,59 +79,6 @@ export type Database = {
         }
         Relationships: []
       }
-      subscriptions: {
-        Row: {
-          cost: number
-          created_at: string
-          id: string
-          is_trial: boolean
-          next_due_date: string
-          payment_mode: string
-          plan_type: string
-          service_name: string
-          subscription_status: Database["public"]["Enums"]["status"]
-          trial_end_date: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          cost: number
-          created_at?: string
-          id?: string
-          is_trial?: boolean
-          next_due_date: string
-          payment_mode: string
-          plan_type: string
-          service_name: string
-          subscription_status?: Database["public"]["Enums"]["status"]
-          trial_end_date?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          cost?: number
-          created_at?: string
-          id?: string
-          is_trial?: boolean
-          next_due_date?: string
-          payment_mode?: string
-          plan_type?: string
-          service_name?: string
-          subscription_status?: Database["public"]["Enums"]["status"]
-          trial_end_date?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       subscription_payments: {
         Row: {
           amount: number
@@ -173,6 +120,62 @@ export type Database = {
           },
           {
             foreignKeyName: "subscription_payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          category: string
+          cost: number
+          created_at: string
+          id: string
+          is_trial: boolean
+          next_due_date: string
+          payment_mode: string
+          plan_type: string
+          service_name: string
+          subscription_status: Database["public"]["Enums"]["status"]
+          trial_end_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          cost: number
+          created_at?: string
+          id?: string
+          is_trial?: boolean
+          next_due_date: string
+          payment_mode: string
+          plan_type: string
+          service_name: string
+          subscription_status?: Database["public"]["Enums"]["status"]
+          trial_end_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          cost?: number
+          created_at?: string
+          id?: string
+          is_trial?: boolean
+          next_due_date?: string
+          payment_mode?: string
+          plan_type?: string
+          service_name?: string
+          subscription_status?: Database["public"]["Enums"]["status"]
+          trial_end_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"

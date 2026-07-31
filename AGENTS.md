@@ -16,7 +16,7 @@ Before starting any feature implementation, debugging, or test creation, you MUS
 - Always refer to the [Next.js Documentation](https://nextjs.org/docs) for the latest best practices and documentation.
 
 ## Styling & UI (Shadcn + Framer Motion)
-- Utilize Shadcn UI as the foundation for all interface components.
+- Utilize Shadcn UI as the foundation for all interface components using the Shadcn MCP
 - Take full initiative in the design phase. Generate complete, polished component stylings using Shadcn and Tailwind CSS so the developer can focus strictly on frontend and backend logic integration.
 - Implement Framer Motion for fluid layout animations, page transitions, and micro-interactions, ensuring animations respect user accessibility preferences (prefers-reduced-motion).
 
@@ -31,6 +31,9 @@ Before starting any feature implementation, debugging, or test creation, you MUS
 - Utilize strict TypeScript definitions generated directly from the Supabase schema.
 - Always refer to the [Supabase Documentation](https://supabase.com/docs) for the latest best practices and documentation.
 - Utilize Supabase MCP for all database interactions.
+
+## State Management (Zustand)
+- Always refer to the [Zustand Documentation](https://zustand.docs.pmnd.rs/) for the latest best practices and documentation.
 
 # Workflow & Testing Mandate
 - Write comprehensive unit tests for all critical utility functions and complex UI components before marking a task complete.

@@ -31,65 +31,67 @@ CREATE OR REPLACE FUNCTION public.process_subscription_payment()
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
+DECLARE
+    calculated_due_date TIMESTAMPTZ;
 BEGIN
-    -- SCENARIO A: User Swipes Right (Paid) -> Log payment & shift date forward 1 cycle
-    IF (NEW.subscription_status = 'paid') THEN
-        INSERT INTO public.subscription_payments (
-            user_id,
-            subscription_id,
-            service_name,
-            amount,
-            plan_type,
-            payment_date
-        ) VALUES (
-            NEW.user_id,
-            NEW.id,
-            NEW.service_name,
-            NEW.cost,
-            NEW.plan_type,
-            timezone('utc'::text, now())
-        );
+    IF (TG_OP = 'UPDATE') THEN
+        IF (NEW.subscription_status = 'paid') THEN
+            INSERT INTO public.subscription_payments (
+                user_id, subscription_id, service_name, amount, plan_type, payment_date
+            ) VALUES (
+                NEW.user_id, NEW.id, NEW.service_name, NEW.cost, NEW.plan_type, timezone('utc'::text, now())
+            );
 
-        NEW.next_due_date := CASE
-            WHEN NEW.plan_type = 'Weekly'  THEN NEW.next_due_date + INTERVAL '1 week'
-            WHEN NEW.plan_type = 'Monthly' THEN NEW.next_due_date + INTERVAL '1 month'
-            WHEN NEW.plan_type = 'Annual'  THEN NEW.next_due_date + INTERVAL '1 year'
-            ELSE NEW.next_due_date
-        END;
-        -- Reset status back to unpaid for the new upcoming period
-        NEW.subscription_status := 'unpaid';
-        NEW.updated_at := timezone('utc'::text, now());
-    -- SCENARIO B: Catch-all state modifier for rows passing their due date
-    ELSIF (NEW.next_due_date < current_date AND NEW.subscription_status = 'unpaid') THEN
-        NEW.subscription_status := 'overdue';
+            NEW.next_due_date := CASE
+                WHEN NEW.plan_type = 'Weekly'  THEN NEW.next_due_date + INTERVAL '1 week'
+                WHEN NEW.plan_type = 'Monthly' THEN NEW.next_due_date + INTERVAL '1 month'
+                WHEN NEW.plan_type = 'Annual'  THEN NEW.next_due_date + INTERVAL '1 year'
+                ELSE NEW.next_due_date
+            END;
+            NEW.subscription_status := 'unpaid';
+            NEW.updated_at := timezone('utc'::text, now());
+        ELSIF (NEW.next_due_date < current_date AND NEW.subscription_status = 'unpaid') THEN
+            NEW.subscription_status := 'overdue';
+        END IF;
+        RETURN NEW;
+
+    ELSIF (TG_OP = 'INSERT') THEN
+        IF (NEW.subscription_status = 'paid') THEN
+            INSERT INTO public.subscription_payments (
+                user_id, subscription_id, service_name, amount, plan_type, payment_date
+            ) VALUES (
+                NEW.user_id, NEW.id, NEW.service_name, NEW.cost, NEW.plan_type, timezone('utc'::text, now())
+            );
+
+            calculated_due_date := CASE
+                WHEN NEW.plan_type = 'Weekly'  THEN NEW.next_due_date + INTERVAL '1 week'
+                WHEN NEW.plan_type = 'Monthly' THEN NEW.next_due_date + INTERVAL '1 month'
+                WHEN NEW.plan_type = 'Annual'  THEN NEW.next_due_date + INTERVAL '1 year'
+                ELSE NEW.next_due_date
+            END;
+
+            UPDATE public.subscriptions
+            SET next_due_date = calculated_due_date,
+                subscription_status = 'unpaid',
+                updated_at = timezone('utc'::text, now())
+            WHERE id = NEW.id;
+        END IF;
+        RETURN NEW;
     END IF;
+
     RETURN NEW;
 END;
 $function$;
 
--- 5. Trigger on public.subscriptions BEFORE UPDATE
 DROP TRIGGER IF EXISTS trg_process_subscription_payment ON public.subscriptions;
-CREATE TRIGGER trg_process_subscription_payment
+DROP TRIGGER IF EXISTS trg_process_subscription_payment_insert ON public.subscriptions;
+DROP TRIGGER IF EXISTS trg_process_subscription_payment_update ON public.subscriptions;
+
+-- 5. Triggers on public.subscriptions
+CREATE TRIGGER trg_process_subscription_payment_update
     BEFORE UPDATE ON public.subscriptions
     FOR EACH ROW EXECUTE FUNCTION public.process_subscription_payment();
 
--- 6. Backfill initial payment records for existing active subscriptions
-INSERT INTO public.subscription_payments (
-    user_id,
-    subscription_id,
-    service_name,
-    amount,
-    plan_type,
-    payment_date
-)
-SELECT 
-    s.user_id,
-    s.id,
-    s.service_name,
-    s.cost,
-    s.plan_type,
-    s.created_at
-FROM public.subscriptions s
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.subscription_payments sp WHERE sp.subscription_id = s.id
-);
+CREATE TRIGGER trg_process_subscription_payment_insert
+    AFTER INSERT ON public.subscriptions
+    FOR EACH ROW EXECUTE FUNCTION public.process_subscription_payment();

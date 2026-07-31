@@ -18,33 +18,23 @@ Recurr's design direction is a **Modern Minimalist & Monoline** interface. It us
 
 ## 2. Color Palette, Accessibility & Theme Compliance
 
-Recurr supports a fully dynamic, light-and-dark theme system configured via **Tailwind CSS v4** and native CSS variables in `app/globals.css`.
+All color tokens, light/dark theme variables, Tailwind CSS v4 `@theme inline` mappings, and `@layer base` defaults are defined directly in `app/globals.css`. **Do not hardcode or duplicate raw color values in component code or documentation.** Refer directly to `app/globals.css` as the single source of truth so token modifications automatically adapt throughout the application.
 
-### OKLCH Color Tokens
-Colors are defined using the `oklch` color space to ensure uniform brightness perception across the spectrum.
+### Theme & Token Rules
 
-| Token | Light Theme Value | Dark Theme Value | Usage |
-| :--- | :--- | :--- | :--- |
-| `--background` | `oklch(1 0 0)` (Pure White) | `oklch(0.145 0 0)` (Deep Charcoal) | Primary application background |
-| `--foreground` | `oklch(0.145 0 0)` | `oklch(0.985 0 0)` | Primary text and high-contrast lines |
-| `--primary` | `oklch(0.52 0.105 223.128)` | `oklch(0.45 0.085 224.283)` | Brand color, primary action buttons |
-| `--primary-foreground` | `oklch(0.984 0.019 200.873)` | `oklch(0.984 0.019 200.873)` | Text on top of primary colors |
-| `--muted` | `oklch(0.97 0 0)` | `oklch(0.269 0 0)` | Secondary background, disabled states |
-| `--muted-foreground` | `oklch(0.556 0 0)` | `oklch(0.708 0 0)` | Low-contrast text, secondary labels |
-| `--border` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 10%)` | Standard 1px divider lines |
-| `--input` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 15%)` | Form input borders |
-| `--destructive` | `oklch(0.577 0.245 27.325)` | `oklch(0.704 0.191 22.216)` | Error/warning **text** and unpaid/overdue status **labels** (text color only — never as a background fill) |
-
-### Accessibility, Readability & Visibility Rules
-*   **Contrast Ratios**: All text must meet WCAG 2.1 AA contrast requirements (minimum **4.5:1** for standard body text, **3:1** for large heading text). 
-    *   Standard text must utilize `text-foreground`.
-    *   Subtle descriptions, metadata, or placeholders must use `text-muted-foreground`. Do not use lighter text shades that compromise readability.
-*   **Interactive State Contrast**: Hover, focus, and active states must remain distinct and visible. When focus is active, elements must display a sharp 1px ring (`focus-visible:ring-1 focus-visible:ring-ring/50`) and border update (`focus-visible:border-ring`).
-*   **Color as Meaning**: Never use color alone to convey subscription state (e.g., unpaid vs. paid). Support color indicators (such as badges) with text labels (e.g., "Paid", "Unpaid", "Overdue") to ensure screen-reader and colorblind accessibility.
-*   **State Colors Apply to Text, Not Backgrounds**: Semantic state tokens (e.g., `--destructive`) must be applied to text (`text-destructive`) and, where needed, borders (`border-destructive`). Do not use them as background fills (avoid `bg-destructive`, `bg-destructive/10`, etc.). Status badges and labels stay monoline — a bordered/outlined chip with colored text, not a colored block — to keep contrast predictable across light/dark themes and preserve the flat, borders-only aesthetic.
-
-### Tailwind CSS v4 Theme Map
-Native variables are mapped within `@theme inline` in `app/globals.css`. Always use semantic utility classes (`bg-background`, `text-foreground`, `border-border`, `bg-primary`, etc.) instead of hardcoded hex codes or arbitrary OKLCH values.
+1. **Single Source of Truth**: All native CSS variables (in `:root` and `.dark`), OKLCH values, theme extensions (`@theme inline`), and global base rules live in `app/globals.css`.
+2. **Use Semantic Utility Classes Only**: Always use semantic Tailwind utility classes (`bg-background`, `text-foreground`, `border-border`, `bg-card`, `text-card-foreground`, `bg-primary`, `bg-sidebar`, `text-sidebar-foreground`, `border-sidebar-border`, etc.) instead of hardcoded hex codes, RGB strings, or arbitrary OKLCH values.
+3. **Accessibility & WCAG AA Compliance**:
+   - All text must meet WCAG 2.1 AA contrast requirements (minimum **4.5:1** for body text, **3:1** for large text).
+   - Use `text-foreground` for main content and `text-muted-foreground` for subtle metadata or secondary labels. Never use ultra-light shades that degrade legibility.
+4. **Interactive State Contrast**:
+   - Hover, focus, and active states must remain distinct.
+   - Focused elements must display a sharp 1px ring (`focus-visible:ring-1 focus-visible:ring-ring/50`) and border update (`focus-visible:border-ring`).
+5. **Color as Meaning**:
+   - Never rely on color alone to convey subscription or payment state. Pair visual color indicators with explicit text labels (e.g., "Paid", "Unpaid", "Overdue").
+6. **State Colors Apply to Text & Borders Only (Never Background Fills)**:
+   - Semantic feedback tokens (such as `--destructive`, `--warning`, `--success`) must be applied to text (`text-destructive`, `text-warning`, `text-success`) and borders (`border-destructive`, `border-warning`), **never as background fills** (avoid `bg-destructive`, `bg-destructive/10`, etc.).
+   - Status badges and labels must maintain a monoline aesthetic — a bordered/outlined chip with colored text — to ensure predictable contrast across light/dark themes and preserve the flat, monoline look.
 
 ---
 
@@ -59,35 +49,26 @@ To enforce the monoline aesthetic, the corner radius must remain strictly **zero
 
 ---
 
-## 4. Typography Hierarchy
+## 4. Typography Hierarchy & Scaling Instructions
 
-To maintain visual discipline and high-density legibility, typography uses a highly standardized, **responsive** scale of sizes and font weights. Sizes are defined per breakpoint so text scales up gracefully on larger screens.
+Font family tokens (`--font-sans`, `--font-heading`) and global font rules (`html { @apply font-sans; }`) are configured directly in `app/globals.css`.
 
-Headings and body copy follow the industry-standard modular scale (16px/`text-base` as the body-text floor, headers stepping up through the standard `lg`/`xl`/`2xl`/`3xl` sizes) for readability and accessibility. Dense UI chrome — metadata, interactive labels, overlines — stays on the tighter end of the scale to preserve the high-density feel from Section 1. Headers are not part of that density budget: they should read clearly at a glance, not be squeezed to match table rows.
+### Typography Instructions & Rules
 
-### Responsive Type Scale
-
-Every level below is defined with three font-size steps — mobile (base, unprefixed), tablet (`md:`, ≥768px), and desktop (`lg:`, ≥1024px). Weight and line-height stay constant across breakpoints; only size increases.
-
-| Element Level | Mobile (base) | Tablet (`md:`) | Desktop (`lg:`) | Font Weight | Line Height | Usage |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Display / Hero** | `text-2xl` | `md:text-3xl` | `lg:text-4xl` | `font-bold` | `leading-tight` | Empty-state hero text, onboarding headlines, marketing sections |
-| **Page Header / H1** | `text-xl` | `md:text-2xl` | `lg:text-3xl` | `font-heading` | `leading-tight` | Main page titles, dashboard headings |
-| **Section Title / H2** | `text-lg` | `md:text-xl` | `lg:text-2xl` | `font-heading` | `leading-snug` | Card titles, calendar month headings |
-| **Subsection Header / H3** | `text-base` | `md:text-lg` | `lg:text-xl` | `font-heading` | `leading-normal` | Form field groups, list category headers |
-| **Body Text / Standard** | `text-sm` | `md:text-base` | `lg:text-base` | `font-normal` | `leading-relaxed` | Main paragraphs, description blocks |
-| **Large Body / Emphasis** | `text-base` | `md:text-lg` | `lg:text-lg` | `font-medium` | `leading-relaxed` | Plan summaries, callouts, emphasized copy |
-| **Muted Metadata / Subtitle** | `text-xs` | `md:text-xs` | `lg:text-sm` | `font-normal` | `leading-normal` | Timestamps, currency labels, secondary text |
-| **Interactive Text / Buttons** | `text-sm` | `md:text-sm` | `lg:text-base` | `font-medium` | `leading-none` | Button labels, tabs, form selections |
-| **Forms & Input Labels** | `text-sm` | `md:text-sm` | `lg:text-base` | `font-medium` | `leading-none` | Input labels, validation error messages |
-| **Overline / Eyebrow** | `text-xs` | `md:text-xs` | `lg:text-sm` | `font-semibold` `uppercase` `tracking-wide` | `leading-none` | Status kickers, section eyebrows above headings |
-| **Code / Monospace** | `text-sm` | `md:text-sm` | `lg:text-base` | `font-normal` `font-mono` | `leading-relaxed` | Inline code, IDs, API keys, technical values |
-
-### Responsive Scaling Rules
-*   **One step per breakpoint.** Scale each level up by exactly one Tailwind size step per breakpoint jump (mobile → `md:` → `lg:`). Never skip a step or jump two sizes at once — this keeps the vertical rhythm and hierarchy predictable at every width.
-*   **Weight and line-height are fixed.** Only `text-*` size changes across breakpoints; `font-weight` and `leading-*` stay the same at every viewport for a given element level.
-*   **Compose full responsive class strings.** Always write all three sizes together on the element, e.g. `className="text-lg md:text-xl lg:text-2xl font-medium leading-snug"` — never leave a breakpoint size unspecified and let it silently inherit mobile sizing on larger screens.
-*   **16px (`text-base`) is the body-text floor.** Standard paragraph and body copy should not render smaller than `text-base` at the `md:` breakpoint and above — this is the common accessibility baseline for comfortable reading, not just a density target. Compact/dense elements (metadata, overlines, table chrome) are the deliberate exceptions, not the default.
+1. **Font Family Application**:
+   - Use `font-sans` for standard body text, paragraph copy, form controls, buttons, and general UI chrome.
+   - Use `font-heading` for main page titles, card headers, section headings, and modal headers.
+   - Use `font-mono` for technical values, IDs, inline code, and transaction references.
+2. **Full Responsive Class Strings**:
+   - Every text element must carry a complete responsive class string specifying mobile (unprefixed), tablet (`md:`), and desktop (`lg:`) sizes (e.g. `className="text-lg md:text-xl lg:text-2xl font-heading leading-snug"`).
+   - Do not leave breakpoint sizes unspecified or rely on single mobile classes for larger screens.
+3. **Predictable Scaling Ratio**:
+   - Scale font sizes up by exactly one Tailwind size step per breakpoint jump (mobile → `md:` → `lg:`).
+   - Keep `font-weight` and `leading-*` (line height) constant across viewports for a given element level.
+4. **Body Text Floor (16px Baseline)**:
+   - Body copy and standard paragraph text must not render below `text-base` at `md:` (≥768px) and above to preserve accessibility standards.
+5. **High-Density Chrome Exemption**:
+   - Metadata, overlines, timestamps, interactive badges, and table chrome use tighter text sizing (`text-xs`/`text-sm`) to preserve high information density.
 
 ---
 
