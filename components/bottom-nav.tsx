@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { LayoutDashboard, CalendarDays, List, Settings, LogOut, Loader2, Trash2, AlertTriangle, ArrowDown, ArrowUp, RotateCw } from "lucide-react"
+import { LayoutDashboard, CalendarDays, List, Settings, LogOut, Loader2, Trash2, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MobileCalendar } from "@/components/mobile-calendar"
 import { SubscriptionList } from "@/components/subscription-list"
@@ -15,6 +15,7 @@ import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/types/profiles"
 import type { Subscription } from "@/types/subscriptions"
 import type { DashboardAnalytics } from "@/types/analytics"
+import { NotificationSettings } from "@/components/notification-settings"
 import { NotificationPopover } from "@/components/notification-panel"
 import {
   AlertDialog,
@@ -65,7 +66,7 @@ export function BottomNav({ user, profile, subscriptions, analytics }: BottomNav
         {activeTab === "subscriptions" && (
           <SubscriptionsPanel subscriptions={subscriptions} />
         )}
-        {activeTab === "settings" && <SettingsPanel user={user} />}
+        {activeTab === "settings" && <SettingsPanel user={user} profile={profile} />}
       </main>
 
       {/* Floating Add Button — above the nav, bottom-right */}
@@ -218,7 +219,7 @@ function SubscriptionsPanel({ subscriptions }: { subscriptions: Subscription[] }
   )
 }
 
-function SettingsPanel({ user }: { user: User }) {
+function SettingsPanel({ user, profile }: { user: User; profile: Profile | null }) {
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
@@ -280,32 +281,11 @@ function SettingsPanel({ user }: { user: User }) {
         </div>
       </div>
 
-      {/* Sign out */}
-      <div className="border-b border-border px-4 py-4">
-        <form onSubmit={handleSignOut}>
-          <Button
-            variant="outline"
-            type="submit"
-            disabled={isSigningOut || isDeletingAccount}
-            className="w-full text-sm font-medium leading-none md:text-sm lg:text-base"
-          >
-            {isSigningOut ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-                Signing out...
-              </>
-            ) : (
-              <>
-                <LogOut className="mr-2 size-4" aria-hidden="true" />
-                Sign out
-              </>
-            )}
-          </Button>
-        </form>
-      </div>
+      {/* Granular Notification Settings */}
+      <NotificationSettings user={user} profile={profile} />
 
       {/* Danger Zone */}
-      <div className="px-4 py-4">
+      <div className="border-b border-border px-4 py-4">
         <h2 className="mb-1 text-xs font-heading font-semibold uppercase tracking-wide leading-none text-destructive md:text-xs lg:text-sm">
           Danger Zone
         </h2>
@@ -369,6 +349,30 @@ function SettingsPanel({ user }: { user: User }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      </div>
+
+      {/* Sign out */}
+      <div className="border-b border-border px-4 py-4">
+        <form onSubmit={handleSignOut}>
+          <Button
+            variant="outline"
+            type="submit"
+            disabled={isSigningOut || isDeletingAccount}
+            className="w-full text-sm font-medium leading-none md:text-sm lg:text-base"
+          >
+            {isSigningOut ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                Signing out...
+              </>
+            ) : (
+              <>
+                <LogOut className="mr-2 size-4" aria-hidden="true" />
+                Sign out
+              </>
+            )}
+          </Button>
+        </form>
       </div>
     </div>
   )
