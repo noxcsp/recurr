@@ -6,6 +6,7 @@ import type { Notification } from "@/types/notifications"
 
 export async function getNotifications(limit: number = 20): Promise<{
   data: Notification[]
+  unreadCount: number
   error?: string
 }> {
   const supabase = await createClient()
@@ -13,21 +14,31 @@ export async function getNotifications(limit: number = 20): Promise<{
   const { data: userData, error: authError } = await supabase.auth.getUser()
 
   if (authError || !userData?.user) {
-    return { data: [], error: "Unauthorized" }
+    return { data: [], unreadCount: 0, error: "Unauthorized" }
   }
 
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", userData.user.id)
-    .order("created_at", { ascending: false })
-    .limit(limit)
+  const [dataResult, countResult] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("id, user_id, title, body, is_read, subscription_id, created_at")
+      .eq("user_id", userData.user.id)
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userData.user.id)
+      .eq("is_read", false),
+  ])
 
-  if (error) {
-    return { data: [], error: error.message }
+  if (dataResult.error) {
+    return { data: [], unreadCount: 0, error: dataResult.error.message }
   }
 
-  return { data: (data ?? []) as Notification[] }
+  return {
+    data: (dataResult.data ?? []) as Notification[],
+    unreadCount: countResult.count ?? 0,
+  }
 }
 
 /**

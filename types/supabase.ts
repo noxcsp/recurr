@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -58,6 +58,8 @@ export type Database = {
           fcm_token: string | null
           id: string
           last_swipeoff_date: string | null
+          notification_ttl_days: number
+          notify_advance_days: number
           timezone: string | null
           updated_at: string
         }
@@ -66,6 +68,8 @@ export type Database = {
           fcm_token?: string | null
           id: string
           last_swipeoff_date?: string | null
+          notification_ttl_days?: number
+          notify_advance_days?: number
           timezone?: string | null
           updated_at?: string
         }
@@ -74,6 +78,8 @@ export type Database = {
           fcm_token?: string | null
           id?: string
           last_swipeoff_date?: string | null
+          notification_ttl_days?: number
+          notify_advance_days?: number
           timezone?: string | null
           updated_at?: string
         }

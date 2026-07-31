@@ -32,8 +32,11 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  // Background message received — notification is shown automatically by FCM.
-  // Custom handling (e.g. badge updates) can be added here.
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    for (const client of windowClients) {
+      client.postMessage({ type: 'BACKGROUND_PUSH_RECEIVED', payload });
+    }
+  });
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -44,6 +47,7 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
+        client.postMessage({ type: 'NOTIFICATION_CLICKED', payload: event.notification.data });
         if (client.url.includes(link) && 'focus' in client) {
           return client.focus();
         }

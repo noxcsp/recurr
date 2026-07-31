@@ -82,11 +82,31 @@ interface NotificationResult {
   subscription_id: string;
   user_id: string;
   service_name: string;
-  type: "due_tomorrow" | "overdue";
+  type: "due" | "trial_ending" | "overdue";
   days_overdue?: number;
+  advance_days?: number;
   success: boolean;
   error?: string;
   isUnregistered?: boolean;
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(amount);
+}
+
+function addDaysToDateStr(baseDateStr: string, days: number): string {
+  const d = new Date(`${baseDateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+function getDaysDifference(startDateStr: string, endDateStr: string): number {
+  const start = new Date(`${startDateStr}T00:00:00Z`);
+  const end = new Date(`${endDateStr}T00:00:00Z`);
+  return Math.max(1, Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
 async function sendFcmNotification(
@@ -139,39 +159,83 @@ Deno.serve(async () => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Resolve today and tomorrow as UTC date strings (YYYY-MM-DD)
+    // Resolve today as UTC date string (YYYY-MM-DD)
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];
 
-    const tomorrowDate = new Date(now);
-    tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
-    const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
+    // ------------------------------------------------------------------
+    // 1. Fetch user profiles to map FCM tokens & notify_advance_days
+    // ------------------------------------------------------------------
+    const { data: profiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, fcm_token, notify_advance_days");
+
+    if (profileError) {
+      throw new Error(`Profile query error: ${profileError.message}`);
+    }
+
+    const profileMap = new Map<
+      string,
+      { fcm_token: string | null; notify_advance_days: number }
+    >();
+
+    const advanceDaysSet = new Set<number>();
+
+    for (const p of profiles ?? []) {
+      const days = typeof p.notify_advance_days === "number" ? p.notify_advance_days : 3;
+      profileMap.set(p.id, {
+        fcm_token: p.fcm_token ?? null,
+        notify_advance_days: days,
+      });
+      advanceDaysSet.add(days);
+    }
+
+    if (advanceDaysSet.size === 0) {
+      advanceDaysSet.add(3);
+    }
+
+    // Derive target date strings for each distinct notify_advance_days value
+    const targetDates = Array.from(advanceDaysSet).map((days) =>
+      addDaysToDateStr(todayStr, days)
+    );
 
     // ------------------------------------------------------------------
-    // 1. Subscriptions due TOMORROW (all statuses)
+    // 2. Fetch candidate subscriptions (due, trial ending, overdue)
     // ------------------------------------------------------------------
-    const { data: dueTomorrow, error: err1 } = await supabase
+    const { data: upcomingDue, error: err1 } = await supabase
       .from("subscriptions")
-      .select("id, user_id, service_name, plan_type, next_due_date, subscription_status")
-      .eq("next_due_date", tomorrowStr);
+      .select("id, user_id, service_name, cost, plan_type, next_due_date, is_trial, trial_end_date, subscription_status")
+      .in("next_due_date", targetDates);
 
-    if (err1) throw new Error(`Query error (due tomorrow): ${err1.message}`);
+    if (err1) throw new Error(`Query error (upcoming due): ${err1.message}`);
 
-    // ------------------------------------------------------------------
-    // 2. Overdue subscriptions (status = overdue, due date < today)
-    // ------------------------------------------------------------------
-    const { data: overdueRows, error: err2 } = await supabase
+    const { data: trialEnding, error: err2 } = await supabase
       .from("subscriptions")
-      .select("id, user_id, service_name, plan_type, next_due_date, subscription_status")
+      .select("id, user_id, service_name, cost, plan_type, next_due_date, is_trial, trial_end_date, subscription_status")
+      .eq("is_trial", true)
+      .in("trial_end_date", targetDates);
+
+    if (err2) throw new Error(`Query error (trial ending): ${err2.message}`);
+
+    const { data: overdueRows, error: err3 } = await supabase
+      .from("subscriptions")
+      .select("id, user_id, service_name, cost, plan_type, next_due_date, is_trial, trial_end_date, subscription_status")
       .eq("subscription_status", "overdue")
       .lt("next_due_date", todayStr);
 
-    if (err2) throw new Error(`Query error (overdue): ${err2.message}`);
+    if (err3) throw new Error(`Query error (overdue): ${err3.message}`);
 
-    const allRows = [...(dueTomorrow ?? []), ...(overdueRows ?? [])];
-    if (allRows.length === 0) {
+    // Deduplicate candidate subscriptions by ID
+    type SubRow = NonNullable<typeof upcomingDue>[number];
+    const candidateMap = new Map<string, SubRow>();
+    for (const row of [...(upcomingDue ?? []), ...(trialEnding ?? []), ...(overdueRows ?? [])]) {
+      candidateMap.set(row.id, row);
+    }
+
+    const candidateRows = Array.from(candidateMap.values());
+    if (candidateRows.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No subscriptions due or overdue to notify.", results: [] }),
+        JSON.stringify({ message: "No subscriptions due, trial ending, or overdue to notify.", results: [] }),
         { headers: { "Content-Type": "application/json" } }
       );
     }
@@ -190,44 +254,18 @@ Deno.serve(async () => {
         .filter((id): id is string => Boolean(id))
     );
 
-    // Filter out subscriptions that were already notified today
-    const pendingDueTomorrow = (dueTomorrow ?? []).filter(
-      (sub) => !notifiedSubIdsToday.has(sub.id)
-    );
-    const pendingOverdue = (overdueRows ?? []).filter(
+    const pendingCandidates = candidateRows.filter(
       (sub) => !notifiedSubIdsToday.has(sub.id)
     );
 
-    const eligibleRows = [...pendingDueTomorrow, ...pendingOverdue];
-    const uniqueUserIds = [...new Set(eligibleRows.map((r) => r.user_id))];
-
-    if (eligibleRows.length === 0) {
+    if (pendingCandidates.length === 0) {
       return new Response(
         JSON.stringify({ message: "All eligible subscriptions have already been notified today.", results: [] }),
         { headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // ------------------------------------------------------------------
-    // 4. Batch-fetch FCM tokens in chunks (max 250 user IDs per query)
-    // ------------------------------------------------------------------
-    const tokenMap: Record<string, string> = {};
-    const PROFILE_CHUNK_SIZE = 250;
-    for (let i = 0; i < uniqueUserIds.length; i += PROFILE_CHUNK_SIZE) {
-      const userChunk = uniqueUserIds.slice(i, i + PROFILE_CHUNK_SIZE);
-      const { data: profiles, error: err3 } = await supabase
-        .from("profiles")
-        .select("id, fcm_token")
-        .in("id", userChunk)
-        .not("fcm_token", "is", null);
-
-      if (err3) throw new Error(`Profile query error: ${err3.message}`);
-      for (const p of profiles ?? []) {
-        if (p.fcm_token) tokenMap[p.id] = p.fcm_token;
-      }
-    }
-
-    // Obtain Firebase access token once for all requests
+    // Obtain Firebase access token once for all FCM push requests
     const accessToken = await getFirebaseAccessToken();
 
     const notificationsToInsert: {
@@ -242,8 +280,9 @@ Deno.serve(async () => {
       subscription_id: string;
       user_id: string;
       service_name: string;
-      type: "due_tomorrow" | "overdue";
+      type: "due" | "trial_ending" | "overdue";
       days_overdue?: number;
+      advance_days?: number;
       title: string;
       body: string;
       fcmToken: string;
@@ -252,47 +291,58 @@ Deno.serve(async () => {
     const fcmTasks: FcmTask[] = [];
 
     // ------------------------------------------------------------------
-    // Prepare due tomorrow notifications & FCM push tasks
+    // 4. Generate notification titles & bodies matching user advance settings
     // ------------------------------------------------------------------
-    for (const sub of pendingDueTomorrow) {
-      const title = `⏰ ${sub.service_name} is due tomorrow`;
-      const body = `Your ${sub.service_name} subscription (${sub.plan_type} plan) renews tomorrow. Make sure your payment is ready.`;
+    for (const sub of pendingCandidates) {
+      const userProfile = profileMap.get(sub.user_id);
+      if (!userProfile) continue;
 
-      notificationsToInsert.push({
-        user_id: sub.user_id,
-        subscription_id: sub.id,
-        title,
-        body,
-        is_read: false,
-      });
+      const userAdvanceDays = userProfile.notify_advance_days;
+      const userTargetDate = addDaysToDateStr(todayStr, userAdvanceDays);
+      const formattedCost = formatCurrency(sub.cost ?? 0);
 
-      const fcmToken = tokenMap[sub.user_id];
-      if (fcmToken) {
-        fcmTasks.push({
-          subscription_id: sub.id,
-          user_id: sub.user_id,
-          service_name: sub.service_name,
-          type: "due_tomorrow",
-          title,
-          body,
-          fcmToken,
-        });
+      let title = "";
+      let body = "";
+      let notifType: "due" | "trial_ending" | "overdue" | null = null;
+      let daysOverdue: number | undefined;
+
+      // Condition A: Trial Ending
+      if (sub.is_trial && sub.trial_end_date === userTargetDate) {
+        notifType = "trial_ending";
+        const timingStr =
+          userAdvanceDays === 0
+            ? "today"
+            : userAdvanceDays === 1
+            ? "tomorrow"
+            : `in ${userAdvanceDays} days`;
+
+        title = `${sub.service_name} trial ends ${timingStr}`;
+        body = `Converts to ${sub.plan_type} at ${formattedCost}. Review to keep or cancel.`;
       }
-    }
+      // Condition B: Upcoming Renewal
+      else if (sub.next_due_date === userTargetDate) {
+        notifType = "due";
+        const timingStr =
+          userAdvanceDays === 0
+            ? "today"
+            : userAdvanceDays === 1
+            ? "tomorrow"
+            : `in ${userAdvanceDays} days`;
 
-    // ------------------------------------------------------------------
-    // Prepare overdue notifications & FCM push tasks
-    // ------------------------------------------------------------------
-    for (const sub of pendingOverdue) {
-      const dueDate = new Date(`${sub.next_due_date}T00:00:00Z`);
-      const todayMidnight = new Date(`${todayStr}T00:00:00Z`);
-      const daysOverdue = Math.floor(
-        (todayMidnight.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
+        title = `${sub.service_name} due ${timingStr}`;
+        body = `${sub.plan_type} renewal of ${formattedCost}. Review to keep or cancel.`;
+      }
+      // Condition C: Overdue
+      else if (sub.subscription_status === "overdue" && sub.next_due_date < todayStr) {
+        notifType = "overdue";
+        daysOverdue = getDaysDifference(sub.next_due_date, todayStr);
+        const dayLabel = daysOverdue === 1 ? "day" : "days";
 
-      const dayLabel = daysOverdue === 1 ? "day" : "days";
-      const title = `🚨 ${sub.service_name} is ${daysOverdue} ${dayLabel} overdue`;
-      const body = `Your ${sub.service_name} (${sub.plan_type} plan) payment is ${daysOverdue} ${dayLabel} overdue. Please settle it to avoid service interruption.`;
+        title = `${sub.service_name} overdue by ${daysOverdue} ${dayLabel}`;
+        body = `${sub.plan_type} payment of ${formattedCost} is overdue. Review to settle or cancel.`;
+      }
+
+      if (!notifType || !title || !body) continue;
 
       notificationsToInsert.push({
         user_id: sub.user_id,
@@ -302,23 +352,23 @@ Deno.serve(async () => {
         is_read: false,
       });
 
-      const fcmToken = tokenMap[sub.user_id];
-      if (fcmToken) {
+      if (userProfile.fcm_token) {
         fcmTasks.push({
           subscription_id: sub.id,
           user_id: sub.user_id,
           service_name: sub.service_name,
-          type: "overdue",
+          type: notifType,
           days_overdue: daysOverdue,
+          advance_days: userAdvanceDays,
           title,
           body,
-          fcmToken,
+          fcmToken: userProfile.fcm_token,
         });
       }
     }
 
     // ------------------------------------------------------------------
-    // Dispatch FCM notifications in concurrent batches (25 tasks per batch)
+    // 5. Dispatch FCM notifications in concurrent batches (25 tasks per batch)
     // ------------------------------------------------------------------
     const results: NotificationResult[] = [];
     const staleUserIds = new Set<string>();
@@ -337,6 +387,7 @@ Deno.serve(async () => {
           service_name: task.service_name,
           type: task.type,
           days_overdue: task.days_overdue,
+          advance_days: task.advance_days,
           success: res.success,
           error: res.error,
           isUnregistered: res.isUnregistered,
@@ -352,7 +403,7 @@ Deno.serve(async () => {
     }
 
     // ------------------------------------------------------------------
-    // Prune stale FCM tokens from database
+    // 6. Prune stale FCM tokens from database
     // ------------------------------------------------------------------
     if (staleUserIds.size > 0) {
       const staleUserList = [...staleUserIds];
@@ -368,7 +419,7 @@ Deno.serve(async () => {
     }
 
     // ------------------------------------------------------------------
-    // Batch insert in-app notifications into Supabase
+    // 7. Batch insert in-app notifications into Supabase
     // ------------------------------------------------------------------
     let insertedInAppCount = 0;
     if (notificationsToInsert.length > 0) {
@@ -416,3 +467,4 @@ Deno.serve(async () => {
     );
   }
 });
+
