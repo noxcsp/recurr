@@ -65,6 +65,7 @@ import {
   type ServicePlan,
 } from "@/lib/constants/subscription-templates"
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/constants/categories"
+import { formatCurrency } from "@/lib/utils"
 
 const CATEGORY_OPTIONS = ["All", ...SUBSCRIPTION_CATEGORIES]
 
@@ -575,7 +576,7 @@ export function EditSubscriptionForm({
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-bold text-foreground md:text-base">
-                              ₱{plan.cost.toLocaleString()}
+                              {formatCurrency(plan.cost)}
                             </div>
                             <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
                               / {plan.plan_type.toLowerCase()}
@@ -586,50 +587,55 @@ export function EditSubscriptionForm({
                     })}
                   </div>
                 ) : null}
+                  <div className="space-y-4 pt-1">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-foreground md:text-sm">
+                        Subscription Cost (₱)
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                          ₱
+                        </span>
+                        <Input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder="0.00"
+                          className="pl-7 rounded-none text-sm"
+                          value={draftData.cost || ""}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            updateDraft({
+                              cost: val === "" ? 0 : Number(val),
+                              selectedPlanId: undefined,
+                            })
+                          }}
+                        />
+                      </div>
+                    </div>
 
-                {/* Custom Plan Entry / Override Form */}
-                <div className="space-y-4 pt-1">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-foreground md:text-sm">
-                      Subscription Cost (₱)
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                        ₱
-                      </span>
-                      <Input
-                        type="number"
-                        step="any"
-                        min="0"
-                        placeholder="0.00"
-                        className="pl-7 rounded-none text-sm"
-                        value={draftData.cost ?? ""}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          updateDraft({ cost: val === "" ? 0 : Number(val) })
-                        }}
-                      />
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-foreground md:text-sm">
+                        Billing Cycle
+                      </Label>
+                      <Tabs
+                        value={draftData.plan_type || "Monthly"}
+                        onValueChange={(val) =>
+                          updateDraft({
+                            plan_type: val as "Weekly" | "Monthly" | "Annual",
+                            selectedPlanId: undefined,
+                          })
+                        }
+                      >
+                        <TabsList variant="line" className="w-full rounded-none">
+                          <TabsTrigger value="Weekly" className="rounded-none">Weekly</TabsTrigger>
+                          <TabsTrigger value="Monthly" className="rounded-none">Monthly</TabsTrigger>
+                          <TabsTrigger value="Annual" className="rounded-none">Annual</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-foreground md:text-sm">
-                      Billing Cycle
-                    </Label>
-                    <Tabs
-                      value={draftData.plan_type || "Monthly"}
-                      onValueChange={(val) =>
-                        updateDraft({ plan_type: val as "Weekly" | "Monthly" | "Annual" })
-                      }
-                    >
-                      <TabsList variant="line" className="w-full rounded-none">
-                        <TabsTrigger value="Weekly" className="rounded-none">Weekly</TabsTrigger>
-                        <TabsTrigger value="Monthly" className="rounded-none">Monthly</TabsTrigger>
-                        <TabsTrigger value="Annual" className="rounded-none">Annual</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-                </div>
+                
               </div>
             )}
 
@@ -903,7 +909,7 @@ export function EditSubscriptionForm({
                   <div>
                     <span className="text-muted-foreground">Cost:</span>
                     <div className="font-bold text-foreground">
-                      ₱{Number(draftData.cost || 0).toLocaleString()}
+                      {formatCurrency(Number(draftData.cost || 0))}
                     </div>
                   </div>
                   <div>
