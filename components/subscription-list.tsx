@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Subscription } from "@/types/subscriptions"
-import { RefreshCw, Trash2, RotateCcw } from "lucide-react"
+import { RefreshCw, Trash2, RotateCcw, Check, X, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { cancelSubscription, renewSubscription } from "@/app/home/actions"
@@ -27,7 +27,8 @@ interface SubscriptionListProps {
   emptyMessage?: string
 }
 
-function getDaysRemaining(dateStr: string): number {
+function getDaysRemaining(dateStr: string | null): number {
+  if (!dateStr) return Infinity
   const due = parseUtcToLocalDate(dateStr)
   if (!due) return Infinity
   const today = new Date()
@@ -42,7 +43,11 @@ function getTrialDaysRemaining(dateStr: string | null): number {
 }
 
 function getCountdownText(days: number): string {
-  if (days <= 0) return "Today"
+  if (days < 0) {
+    const absDays = Math.abs(days)
+    return `Expired ${absDays} ${absDays === 1 ? "day" : "days"} ago`
+  }
+  if (days === 0) return "Today"
   if (days === 1) return "Tomorrow"
   return `in ${days} days`
 }
@@ -53,7 +58,8 @@ function getCountdownColorClass(days: number): string {
   return "text-success"
 }
 
-function formatDueDate(dateStr: string): string {
+function formatDueDate(dateStr: string | null): string {
+  if (!dateStr) return ""
   const date = parseUtcToLocalDate(dateStr)
   if (!date) return ""
   return date.toLocaleDateString(undefined, {
@@ -78,11 +84,28 @@ function getStatusBadge(sub: Subscription): StatusBadgeInfo | null {
 
   if (sub.is_trial && sub.trial_end_date) {
     const trialDays = getTrialDaysRemaining(sub.trial_end_date)
+    if (trialDays < 0) {
+      return {
+        label: "Trial Expired",
+        className: "bg-destructive/10 border-transparent text-destructive",
+      }
+    }
     if (trialDays <= 7) {
       return {
         label: "Trial ending soon",
         className: "bg-warning/10 border-transparent text-warning",
       }
+    }
+    return {
+      label: "Trial active",
+      className: "bg-success/10 border-transparent text-success",
+    }
+  }
+
+  if (!sub.next_due_date) {
+    return {
+      label: "Active",
+      className: "bg-success/10 border-transparent text-success",
     }
   }
 
@@ -100,7 +123,10 @@ function getStatusBadge(sub: Subscription): StatusBadgeInfo | null {
     }
   }
 
-  return null
+  return {
+    label: "Active",
+    className: "bg-success/10 border-transparent text-success",
+  }
 }
 
 const SWIPE_THRESHOLD = 40
@@ -109,6 +135,7 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedStartMode, setSelectedStartMode] = useState<"trial_end" | "today">("trial_end")
   const [isRenewing, startRenewTransition] = useTransition()
   const [isCancelling, startCancelTransition] = useTransition()
   const [swipeX, setSwipeX] = useState(0)
@@ -117,7 +144,9 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
   const isSwiping = useRef(false)
 
   const isCancelled = sub.subscription_status === "cancelled"
-  const dueDays = getDaysRemaining(sub.next_due_date)
+  const isTrial = sub.is_trial && !!sub.trial_end_date
+  const refDateStr = isTrial ? sub.trial_end_date : sub.next_due_date
+  const dueDays = getDaysRemaining(refDateStr)
   const statusBadge = getStatusBadge(sub)
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -152,21 +181,34 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
     isSwiping.current = false
   }
 
-  const handleRenewOrSubscribeAgain = () => {
+  const handleRenewOrSubscribeAgain = (startDateMode: "today" | "trial_end" = "today") => {
     startRenewTransition(async () => {
-      const result = await renewSubscription(sub.id)
+      const result = await renewSubscription(sub.id, startDateMode)
       if (result?.error) {
-        toast.error(isCancelled ? "Failed to resubscribe" : "Failed to renew", {
-          position: "top-right",
-          description: result.error,
-        })
+        toast.error(
+          isCancelled
+            ? "Failed to resubscribe"
+            : isTrial
+            ? "Failed to activate subscription"
+            : "Failed to renew",
+          {
+            position: "top-right",
+            description: result.error,
+          }
+        )
       } else if (result?.success) {
         toast.success(
-          isCancelled ? "Subscription reactivated" : "Subscription renewed",
+          isCancelled
+            ? "Subscription reactivated"
+            : isTrial
+            ? "Subscription activated"
+            : "Subscription renewed",
           {
             position: "top-right",
             description: isCancelled
               ? `${sub.service_name} is active again.`
+              : isTrial
+              ? `${sub.service_name} paid subscription is now active.`
               : `${sub.service_name} has been marked as paid.`,
           }
         )
@@ -236,7 +278,7 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
                 ₱{sub.cost.toLocaleString()}
               </div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide md:text-xs lg:text-xs">
-                / {sub.plan_type.toLowerCase()}
+                / {sub.plan_type.toLowerCase()}{isTrial ? " after trial" : ""}
               </div>
             </div>
           </div>
@@ -256,9 +298,9 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
                 </Badge>
               )}
               <span className="text-[11px] text-muted-foreground md:text-xs lg:text-xs">
-                {formatDueDate(sub.next_due_date)}
+                {formatDueDate(refDateStr)}
               </span>
-              {!isCancelled && (
+              {!isCancelled && dueDays !== Infinity && (
                 <span
                   className={cn(
                     "ml-auto text-[11px] font-medium md:text-xs lg:text-xs",
@@ -270,7 +312,7 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
               )}
             </div>
 
-            {/* Action button: "Subscribe Again" if cancelled, "Renew" otherwise */}
+            {/* Action button */}
             {isCancelled ? (
               <Button
                 type="button"
@@ -282,6 +324,43 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
               >
                 <RotateCcw className="size-3" data-icon="inline-start" />
                 {isRenewing ? "Reactivating..." : "Subscribe Again"}
+              </Button>
+            ) : isTrial && dueDays < 0 ? (
+              <div className="grid grid-cols-2 gap-2 w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  className="w-full rounded-none py-3.5"
+                  onClick={() => setCancelDialogOpen(true)}
+                  disabled={isCancelling}
+                >
+                  <X className="size-3" data-icon="inline-start" />
+                  Didn&apos;t Renew
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="xs"
+                  className="w-full rounded-none py-3.5"
+                  onClick={() => setRenewDialogOpen(true)}
+                  disabled={isRenewing}
+                >
+                  <Check className="size-3" data-icon="inline-start" />
+                  {isRenewing ? "Activating..." : "Start Paid Plan"}
+                </Button>
+              </div>
+            ) : isTrial ? (
+              <Button
+                type="button"
+                variant="default"
+                size="xs"
+                className="w-full rounded-none py-3.5"
+                onClick={() => setRenewDialogOpen(true)}
+                disabled={isRenewing}
+              >
+                <Zap className="size-3" data-icon="inline-start" />
+                {isRenewing ? "Activating..." : "Activate"}
               </Button>
             ) : (
               <Button
@@ -307,12 +386,16 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
         onOpenChange={setEditDialogOpen}
       />
 
-      {/* Renew / Subscribe Again AlertDialog */}
+      {/* Renew / Subscribe Again / Activate AlertDialog */}
       <AlertDialog open={renewDialogOpen} onOpenChange={setRenewDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-none sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {isCancelled ? "Subscribe Again?" : "Mark as Paid?"}
+              {isCancelled
+                ? "Subscribe Again?"
+                : isTrial
+                ? "Activate Paid Subscription"
+                : "Mark as Paid?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {isCancelled ? (
@@ -322,6 +405,14 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
                     {sub.service_name}
                   </span>{" "}
                   and update its status to paid.
+                </>
+              ) : isTrial ? (
+                <>
+                  When did your paid billing for{" "}
+                  <span className="font-medium text-foreground">
+                    {sub.service_name}
+                  </span>{" "}
+                  start? Select an option below to accurately calculate your upcoming due date:
                 </>
               ) : (
                 <>
@@ -334,16 +425,73 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {isTrial ? (
+            <div className="space-y-2 py-2">
+              <button
+                type="button"
+                disabled={isRenewing}
+                onClick={() => setSelectedStartMode("trial_end")}
+                className={`w-full flex flex-col items-start p-3 border transition-all text-left rounded-none ${
+                  selectedStartMode === "trial_end"
+                    ? "border-foreground bg-accent/40 ring-1 ring-foreground"
+                    : "border-border hover:border-foreground/50 hover:bg-muted/30"
+                }`}
+              >
+                <div className="text-xs font-semibold text-foreground md:text-sm flex items-center justify-between w-full">
+                  <div className="flex items-center gap-1.5">
+                    <span>Auto-charged when trial ended</span>
+                    {selectedStartMode === "trial_end" && (
+                      <Check className="size-3.5 text-foreground stroke-3" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-normal">
+                    {formatDueDate(sub.trial_end_date)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Billed on trial end date. Next due date will be calculated from {formatDueDate(sub.trial_end_date)}.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                disabled={isRenewing}
+                onClick={() => setSelectedStartMode("today")}
+                className={`w-full flex flex-col items-start p-3 border transition-all text-left rounded-none ${
+                  selectedStartMode === "today"
+                    ? "border-foreground bg-accent/40 ring-1 ring-foreground"
+                    : "border-border hover:border-foreground/50 hover:bg-muted/30"
+                }`}
+              >
+                <div className="text-xs font-semibold text-foreground md:text-sm flex items-center justify-between w-full">
+                  <div className="flex items-center gap-1.5">
+                    <span>Subscribed / Billed today</span>
+                    {selectedStartMode === "today" && (
+                      <Check className="size-3.5 text-foreground stroke-3" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-normal">
+                    Today
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Started or renewed today. Next due date will be calculated from today.
+                </p>
+              </button>
+            </div>
+          ) : null}
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isRenewing}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleRenewOrSubscribeAgain}
+              onClick={() => handleRenewOrSubscribeAgain(isTrial ? selectedStartMode : "today")}
               disabled={isRenewing}
               className={cn(buttonVariants({ variant: "default" }), "rounded-none")}
             >
-              {isRenewing ? "Processing..." : "Confirm"}
+              {isRenewing ? "Processing..." : isTrial ? "Confirm & Activate" : "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -125,7 +125,7 @@ export function AddSubscriptionForm({
   } = useSubscriptionWizardStore()
 
   const isCalendarTriggered = !!defaultDate
-  const totalSteps = isCalendarTriggered ? 4 : 5
+  const totalSteps = draftData.is_trial ? 4 : isCalendarTriggered ? 4 : 5
 
   // Define Steps
   const wizardSteps: StepItem[] = [
@@ -133,7 +133,7 @@ export function AddSubscriptionForm({
     { id: 2, title: "Plan", description: "Tier & cost" },
     { id: 3, title: "Payment", description: "Method" },
     { id: 4, title: "Trial", description: "Free duration" },
-    ...(!isCalendarTriggered
+    ...(!isCalendarTriggered && !draftData.is_trial
       ? [{ id: 5, title: "Due Date", description: "Billing cycle" }]
       : []),
   ]
@@ -212,20 +212,31 @@ export function AddSubscriptionForm({
   const handleFinalSubmit = () => {
     setError(null)
 
-    const resolvedDueDate =
-      draftData.next_due_date ||
-      (defaultDate ? parseUtcToLocalDate(defaultDate) : undefined)
+    let resolvedDueDate: Date | undefined = undefined
+    if (!draftData.is_trial) {
+      resolvedDueDate =
+        draftData.next_due_date ||
+        (defaultDate ? parseUtcToLocalDate(defaultDate) : undefined)
 
-    if (!resolvedDueDate) {
-      setError("Please select a next due date.")
-      if (!isCalendarTriggered) setStep(5)
-      return
+      if (!resolvedDueDate) {
+        setError("Please select a next due date.")
+        if (!isCalendarTriggered) setStep(5)
+        return
+      }
+    } else {
+      if (!draftData.trial_end_date) {
+        setError("Please select a trial end date.")
+        setStep(4)
+        return
+      }
     }
 
-    const calculatedStatus = computeSubscriptionStatus(
-      resolvedDueDate,
-      draftData.isStartedToday
-    )
+    const calculatedStatus = draftData.is_trial
+      ? "unpaid"
+      : computeSubscriptionStatus(
+          resolvedDueDate,
+          draftData.isStartedToday
+        )
 
     // Form final validation check
     const finalValues: SubscriptionFormValues = {
@@ -234,7 +245,7 @@ export function AddSubscriptionForm({
       cost: Number(draftData.cost) || 0,
       plan_type: (draftData.plan_type as "Weekly" | "Monthly" | "Annual") || "Monthly",
       payment_mode: draftData.payment_mode || "Other",
-      next_due_date: toUtcDate(resolvedDueDate)!,
+      next_due_date: resolvedDueDate ? toUtcDate(resolvedDueDate)! : (undefined as unknown as Date),
       is_trial: !!draftData.is_trial,
       trial_end_date: draftData.is_trial && draftData.trial_end_date
         ? toUtcDate(draftData.trial_end_date)
@@ -287,7 +298,14 @@ export function AddSubscriptionForm({
         setError("Please select a payment method.")
         return
       }
-    } else if (currentStep === 5 && !isCalendarTriggered) {
+    } else if (currentStep === 4 && draftData.is_trial) {
+      if (!draftData.trial_end_date) {
+        setError("Please select a trial end date.")
+        return
+      }
+      handleFinalSubmit()
+      return
+    } else if (currentStep === 5 && !isCalendarTriggered && !draftData.is_trial) {
       if (!draftData.next_due_date) {
         setError("Please select a next due date.")
         return
@@ -808,7 +826,7 @@ export function AddSubscriptionForm({
                       Next Due Date
                     </Label>
                     <DatePicker
-                      value={draftData.next_due_date}
+                      value={draftData.next_due_date ?? undefined}
                       onChange={(date) => {
                         updateDraft({
                           next_due_date: date,
@@ -897,7 +915,7 @@ export function AddSubscriptionForm({
                   <div>
                     <span className="text-muted-foreground">Status:</span>
                     <div className="font-semibold text-foreground capitalize">
-                      {formatStatusLabel(computeSubscriptionStatus(draftData.next_due_date, draftData.isStartedToday))}
+                      {draftData.is_trial ? "Trial" : formatStatusLabel(computeSubscriptionStatus(draftData.next_due_date ?? undefined, draftData.isStartedToday))}
                     </div>
                   </div>
                   <div>

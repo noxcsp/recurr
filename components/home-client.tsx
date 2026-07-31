@@ -56,6 +56,7 @@ export function HomeClient({
   // Filter subscriptions due today by comparing the date portion of next_due_date
   const todaySubscriptions = useMemo(() => {
     return subscriptions.filter((sub) => {
+      if (!sub.next_due_date) return false
       // next_due_date is stored as a UTC ISO string. Extract the date part.
       const dueDateStr = sub.next_due_date.split("T")[0]
       return dueDateStr === todayDateStr

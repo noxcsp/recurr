@@ -14,7 +14,7 @@ export const subscriptionSchema = z
       ),
     plan_type: z.enum(["Weekly", "Monthly", "Annual"]),
     payment_mode: z.string().min(1, "Payment mode is required."),
-    next_due_date: z.date({ error: "Please select a due date." }),
+    next_due_date: z.date().optional().nullable(),
     is_trial: z.boolean(),
     trial_end_date: z.date().optional().nullable(),
     subscription_status: z.enum(["unpaid", "paid", "overdue", "cancelled"]),
@@ -29,6 +29,18 @@ export const subscriptionSchema = z
     {
       message: "Please select a trial end date.",
       path: ["trial_end_date"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (!data.is_trial && !data.next_due_date) {
+        return false
+      }
+      return true
+    },
+    {
+      message: "Please select a due date.",
+      path: ["next_due_date"],
     }
   )
 

@@ -140,7 +140,7 @@ export type Database = {
           created_at: string
           id: string
           is_trial: boolean
-          next_due_date: string
+          next_due_date: string | null
           payment_mode: string
           plan_type: string
           service_name: string
@@ -155,7 +155,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_trial?: boolean
-          next_due_date: string
+          next_due_date?: string | null
           payment_mode: string
           plan_type: string
           service_name: string
@@ -170,7 +170,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_trial?: boolean
-          next_due_date?: string
+          next_due_date?: string | null
           payment_mode?: string
           plan_type?: string
           service_name?: string

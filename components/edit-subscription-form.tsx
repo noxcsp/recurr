@@ -180,15 +180,17 @@ export function EditSubscriptionForm({
     })
   }, [selectedCategoryFilter, debouncedSearchQuery])
 
+  const totalSteps = draftData.is_trial ? 4 : 5
+
   const wizardSteps: StepItem[] = [
     { id: 1, title: "Service", description: "Select service" },
     { id: 2, title: "Plan", description: "Tier & cost" },
     { id: 3, title: "Payment", description: "Method" },
     { id: 4, title: "Trial", description: "Free duration" },
-    { id: 5, title: "Due Date & Status", description: "Billing & status" },
+    ...(!draftData.is_trial
+      ? [{ id: 5, title: "Due Date & Status", description: "Billing & status" }]
+      : []),
   ]
-
-  const totalSteps = 5
 
   const updateDraft = (updates: Partial<typeof draftData>) => {
     setDraftData((prev) => ({ ...prev, ...updates }))
@@ -242,7 +244,14 @@ export function EditSubscriptionForm({
         setError("Please select a payment method.")
         return
       }
-    } else if (currentStep === 5) {
+    } else if (currentStep === 4 && draftData.is_trial) {
+      if (!draftData.trial_end_date) {
+        setError("Please select a trial end date.")
+        return
+      }
+      handleFinalSubmit()
+      return
+    } else if (currentStep === 5 && !draftData.is_trial) {
       if (!draftData.next_due_date) {
         setError("Please select a next due date.")
         return
@@ -264,9 +273,15 @@ export function EditSubscriptionForm({
   const handleFinalSubmit = () => {
     setError(null)
 
-    if (!draftData.next_due_date) {
+    if (!draftData.is_trial && !draftData.next_due_date) {
       setError("Please select a next due date.")
       setCurrentStep(5)
+      return
+    }
+
+    if (draftData.is_trial && !draftData.trial_end_date) {
+      setError("Please select a trial end date.")
+      setCurrentStep(4)
       return
     }
 
@@ -276,7 +291,7 @@ export function EditSubscriptionForm({
       cost: Number(draftData.cost) || 0,
       plan_type: draftData.plan_type,
       payment_mode: draftData.payment_mode || "Other",
-      next_due_date: toUtcDate(draftData.next_due_date)!,
+      next_due_date: !draftData.is_trial && draftData.next_due_date ? toUtcDate(draftData.next_due_date)! : (undefined as unknown as Date),
       is_trial: !!draftData.is_trial,
       trial_end_date: draftData.is_trial && draftData.trial_end_date
         ? toUtcDate(draftData.trial_end_date)
@@ -776,7 +791,7 @@ export function EditSubscriptionForm({
             )}
 
             {/* STEP 5: NEXT DUE DATE & STATUS */}
-            {currentStep === 5 && (
+            {currentStep === 5 && !draftData.is_trial && (
               <div className="space-y-4">
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold tracking-tight text-foreground md:text-base">
@@ -860,53 +875,55 @@ export function EditSubscriptionForm({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* SUMMARY CARD */}
-                <div className="mt-4 p-3.5 border border-border bg-card space-y-2 rounded-none">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide border-b border-border pb-1.5 flex items-center justify-between">
-                    <span>Summary</span>
-                    <span className="text-[10px] text-muted-foreground font-normal lowercase">
-                      {draftData.plan_type} billing
-                    </span>
+            {/* SUMMARY CARD ON LAST STEP */}
+            {currentStep === totalSteps && (
+              <div className="mt-4 p-3.5 border border-border bg-card space-y-2 rounded-none">
+                <div className="text-xs font-semibold text-foreground uppercase tracking-wide border-b border-border pb-1.5 flex items-center justify-between">
+                  <span>Summary</span>
+                  <span className="text-[10px] text-muted-foreground font-normal lowercase">
+                    {draftData.plan_type} billing
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Service:</span>
+                    <div className="font-semibold text-foreground">
+                      {draftData.service_name || "Not specified"}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">Service:</span>
-                      <div className="font-semibold text-foreground">
-                        {draftData.service_name || "Not specified"}
-                      </div>
+                  <div>
+                    <span className="text-muted-foreground">Category:</span>
+                    <div className="font-medium text-foreground">
+                      {draftData.category || "Other"}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Category:</span>
-                      <div className="font-medium text-foreground">
-                        {draftData.category || "Other"}
-                      </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Cost:</span>
+                    <div className="font-bold text-foreground">
+                      ₱{Number(draftData.cost || 0).toLocaleString()}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Cost:</span>
-                      <div className="font-bold text-foreground">
-                        ₱{Number(draftData.cost || 0).toLocaleString()}
-                      </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Payment Mode:</span>
+                    <div className="font-medium text-foreground">
+                      {draftData.payment_mode || "Not specified"}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Payment Mode:</span>
-                      <div className="font-medium text-foreground">
-                        {draftData.payment_mode || "Not specified"}
-                      </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <div className="font-semibold text-foreground capitalize">
+                      {draftData.is_trial ? "Trial" : formatStatusLabel(draftData.subscription_status)}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Status:</span>
-                      <div className="font-semibold text-foreground capitalize">
-                        {formatStatusLabel(draftData.subscription_status)}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Trial:</span>
-                      <div className="font-medium text-foreground">
-                        {draftData.is_trial && draftData.trial_end_date
-                          ? `Ends ${draftData.trial_end_date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-                          : "None"}
-                      </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Trial:</span>
+                    <div className="font-medium text-foreground">
+                      {draftData.is_trial && draftData.trial_end_date
+                        ? `Ends ${draftData.trial_end_date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+                        : "None"}
                     </div>
                   </div>
                 </div>

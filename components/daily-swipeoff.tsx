@@ -446,14 +446,16 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
   const statusStyle = statusStyles[sub.subscription_status]
 
   const formattedDate = useMemo(() => {
-    const d = new Date(sub.next_due_date)
+    const targetStr = sub.is_trial && sub.trial_end_date ? sub.trial_end_date : sub.next_due_date
+    if (!targetStr) return "N/A"
+    const d = new Date(targetStr)
     return d.toLocaleDateString(undefined, {
       weekday: "short",
       month: "short",
       day: "numeric",
       year: "numeric",
     })
-  }, [sub.next_due_date])
+  }, [sub.is_trial, sub.trial_end_date, sub.next_due_date])
 
   return (
     <div className="flex flex-col overflow-hidden border border-border bg-card ring-1 ring-foreground/10">
@@ -510,7 +512,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
 
           <div className="col-span-2 flex flex-col gap-1">
             <span className="text-xs font-semibold uppercase tracking-wide leading-none text-muted-foreground md:text-xs lg:text-sm">
-              Due Date
+              {sub.is_trial ? "Trial Ends" : "Due Date"}
             </span>
             <span className="flex items-center gap-1 text-sm font-normal leading-relaxed text-foreground md:text-base lg:text-base">
               <CalendarDays className="size-3.5 text-muted-foreground" />

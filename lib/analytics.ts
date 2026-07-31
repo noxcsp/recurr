@@ -25,6 +25,7 @@ export function getOverdueSubscriptions(
     if (sub.subscription_status === "paid" || sub.subscription_status === "cancelled") return false
 
     // Treat next_due_date as local date (YYYY-MM-DD)
+    if (!sub.next_due_date) return false
     const [y, m, d] = sub.next_due_date.split("-").map(Number)
     if (!y || !m || !d) return false
     const dueDate = new Date(y, m - 1, d)
@@ -32,13 +33,15 @@ export function getOverdueSubscriptions(
   })
 
   const overdueItems: OverdueSubscriptionItem[] = overdueList.map((sub) => {
-    const [y, m, d] = sub.next_due_date.split("-").map(Number)
     let diffDays = 1
-    if (y && m && d) {
-      const dueDate = new Date(y, m - 1, d)
-      if (dueDate < today) {
-        const diffMs = today.getTime() - dueDate.getTime()
-        diffDays = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+    if (sub.next_due_date) {
+      const [y, m, d] = sub.next_due_date.split("-").map(Number)
+      if (y && m && d) {
+        const dueDate = new Date(y, m - 1, d)
+        if (dueDate < today) {
+          const diffMs = today.getTime() - dueDate.getTime()
+          diffDays = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+        }
       }
     }
 
@@ -148,6 +151,7 @@ export function calculateDashboardAnalytics(
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7)
 
   const dueThisWeekCount = activeSubs.filter((sub) => {
+    if (!sub.next_due_date) return false
     // Treat next_due_date as local date (YYYY-MM-DD)
     const [y, m, d] = sub.next_due_date.split("-").map(Number)
     if (!y || !m || !d) return false
