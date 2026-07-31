@@ -13,7 +13,6 @@ export const usePushNotifications = () => {
     if (!messaging) return
 
     const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("Foreground FCM message received:", payload)
       const title =
         payload.notification?.title ||
         (payload.data?.title as string | undefined) ||
@@ -38,6 +37,27 @@ export const usePushNotifications = () => {
     })
 
     return () => unsubscribe()
+  }, [])
+
+  // Listen for background push notifications and notification clicks forwarded by the Service Worker
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return
+
+    const handleSwMessage = (event: MessageEvent) => {
+      if (
+        event.data?.type === "BACKGROUND_PUSH_RECEIVED" ||
+        event.data?.type === "NOTIFICATION_CLICKED"
+      ) {
+        window.dispatchEvent(
+          new CustomEvent("recurr-notification-received", { detail: event.data?.payload })
+        )
+      }
+    }
+
+    navigator.serviceWorker.addEventListener("message", handleSwMessage)
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleSwMessage)
+    }
   }, [])
 
   const requestAndSaveToken = useCallback(async (): Promise<boolean> => {

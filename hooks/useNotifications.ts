@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
   getNotifications,
@@ -11,16 +11,29 @@ import {
 import type { Notification } from "@/types/notifications"
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 
+const MAX_NOTIFICATIONS = 50
+const DEBOUNCE_MS = 1000
+
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
+  
   const supabase = useMemo(() => createClient(), [])
+  const lastFetchRef = useRef<number>(0)
 
-  const refetch = useCallback(async () => {
-    const res = await getNotifications()
+  const refetch = useCallback(async (force = false) => {
+    const now = Date.now()
+    if (!force && now - lastFetchRef.current < DEBOUNCE_MS) {
+      return
+    }
+    lastFetchRef.current = now
+
+    const res = await getNotifications(MAX_NOTIFICATIONS)
     if (res.data) {
       setNotifications(res.data)
+      setUnreadCount(res.unreadCount)
     }
     setLoading(false)
   }, [])
@@ -30,10 +43,11 @@ export function useNotifications() {
     let activeChannel: RealtimeChannel | null = null
 
     const initNotifications = async () => {
-      const res = await getNotifications()
+      const res = await getNotifications(MAX_NOTIFICATIONS)
       if (isMounted) {
         if (res.data) {
           setNotifications(res.data)
+          setUnreadCount(res.unreadCount)
         }
         setLoading(false)
       }
@@ -44,11 +58,10 @@ export function useNotifications() {
 
       if (!user || !isMounted) return
 
-      const channelTopic = `notif_user_${user.id}`
-
+      const topic = `notifications_changes_${user.id}`
       const existingChannel = supabase
         .getChannels()
-        .find((ch) => ch.topic === `realtime:${channelTopic}`)
+        .find((ch) => ch.topic === `realtime:${topic}`)
 
       if (existingChannel) {
         await supabase.removeChannel(existingChannel)
@@ -57,38 +70,60 @@ export function useNotifications() {
       if (!isMounted) return
 
       activeChannel = supabase
-        .channel(channelTopic)
+        .channel(topic)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
             table: "notifications",
-            filter: `user_id=eq.${user.id}`,
           },
           (payload: RealtimePostgresChangesPayload<Notification>) => {
             if (!isMounted) return
 
             if (payload.eventType === "INSERT") {
               const newNotif = payload.new as Notification
-              setNotifications((prev) => {
-                if (prev.some((n) => n.id === newNotif.id)) return prev
-                return [newNotif, ...prev]
-              })
+              if (newNotif && newNotif.id) {
+                setNotifications((prev) => {
+                  if (prev.some((n) => n.id === newNotif.id)) return prev
+                  return [newNotif, ...prev].slice(0, MAX_NOTIFICATIONS)
+                })
+                if (!newNotif.is_read) {
+                  setUnreadCount((c) => c + 1)
+                }
+              }
             } else if (payload.eventType === "UPDATE") {
               const updatedNotif = payload.new as Notification
-              setNotifications((prev) =>
-                prev.map((n) => (n.id === updatedNotif.id ? { ...n, ...updatedNotif } : n))
-              )
-            } else if (payload.eventType === "DELETE") {
-              const deletedId = (payload.old as Partial<Notification>).id
-              if (deletedId) {
-                setNotifications((prev) => prev.filter((n) => n.id !== deletedId))
+              if (updatedNotif && updatedNotif.id) {
+                setNotifications((prev) => {
+                  const existing = prev.find((n) => n.id === updatedNotif.id)
+                  if (existing && existing.is_read !== updatedNotif.is_read) {
+                    setUnreadCount((c) => (updatedNotif.is_read ? Math.max(0, c - 1) : c + 1))
+                  }
+                  return prev.map((n) => (n.id === updatedNotif.id ? { ...n, ...updatedNotif } : n))
+                })
               }
+            } else if (payload.eventType === "DELETE") {
+              const deletedId = (payload.old as Partial<Notification>)?.id
+              if (deletedId) {
+                setNotifications((prev) => {
+                  const target = prev.find((n) => n.id === deletedId)
+                  if (target && !target.is_read) {
+                    setUnreadCount((c) => Math.max(0, c - 1))
+                  }
+                  return prev.filter((n) => n.id !== deletedId)
+                })
+              }
+              refetch(true)
             }
           }
         )
-        .subscribe()
+
+      activeChannel.subscribe((status, err) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.warn(`Supabase Realtime notification channel status: ${status}`, err)
+        }
+      })
     }
 
     initNotifications()
@@ -99,17 +134,27 @@ export function useNotifications() {
         supabase.removeChannel(activeChannel)
       }
     }
-  }, [supabase])
+  }, [supabase, refetch])
 
   useEffect(() => {
     const handleNotifEvent = () => {
-      refetch()
-      setTimeout(refetch, 500)
+      refetch(true)
+    }
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        refetch(false)
+      }
     }
 
     window.addEventListener("recurr-notification-received", handleNotifEvent)
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus)
+    window.addEventListener("focus", handleVisibilityOrFocus)
+
     return () => {
       window.removeEventListener("recurr-notification-received", handleNotifEvent)
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus)
+      window.removeEventListener("focus", handleVisibilityOrFocus)
     }
   }, [refetch])
 
@@ -119,6 +164,7 @@ export function useNotifications() {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     )
+    setUnreadCount((c) => Math.max(0, c - 1))
     await markNotificationAsRead(id)
     setActionInProgress(null)
   }, [])
@@ -127,6 +173,7 @@ export function useNotifications() {
     setActionInProgress("all")
     // Optimistic update
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+    setUnreadCount(0)
     await markAllNotificationsAsRead()
     setActionInProgress(null)
   }, [])
@@ -134,12 +181,16 @@ export function useNotifications() {
   const deleteNotif = useCallback(async (id: string) => {
     setActionInProgress(id)
     // Optimistic update
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    setNotifications((prev) => {
+      const target = prev.find((n) => n.id === id)
+      if (target && !target.is_read) {
+        setUnreadCount((c) => Math.max(0, c - 1))
+      }
+      return prev.filter((n) => n.id !== id)
+    })
     await deleteNotification(id)
     setActionInProgress(null)
   }, [])
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length
 
   return {
     notifications,
