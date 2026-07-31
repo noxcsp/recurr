@@ -23,6 +23,7 @@ import { parseUtcToLocalDate } from "@/lib/utils/date"
 
 interface SubscriptionListProps {
   subscriptions: Subscription[]
+  emptyMessage?: string
 }
 
 function getDaysRemaining(dateStr: string): number {
@@ -323,11 +324,11 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
   )
 }
 
-export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
+export function SubscriptionList({ subscriptions, emptyMessage }: SubscriptionListProps) {
   if (subscriptions.length === 0) {
     return (
-      <div className="border border-dashed p-6 text-center text-sm text-muted-foreground md:text-base lg:text-base">
-        No subscriptions yet. Add one to get started.
+      <div className="border border-dashed border-border p-6 text-center text-xs text-muted-foreground md:text-sm lg:text-sm">
+        {emptyMessage || "No subscriptions yet. Add one to get started."}
       </div>
     )
   }
