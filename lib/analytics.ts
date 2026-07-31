@@ -22,7 +22,7 @@ export function getOverdueSubscriptions(
 
   const overdueList = subscriptions.filter((sub) => {
     if (sub.subscription_status === "overdue") return true
-    if (sub.subscription_status === "paid") return false
+    if (sub.subscription_status === "paid" || sub.subscription_status === "cancelled") return false
 
     // Treat next_due_date as local date (YYYY-MM-DD)
     const [y, m, d] = sub.next_due_date.split("-").map(Number)
@@ -137,8 +137,9 @@ export function calculateDashboardAnalytics(
     trendLabel = "no spend this month"
   }
 
-  // 4. Active Subscriptions Count
-  const activeSubscriptionsCount = subscriptions.length
+  // 4. Active Subscriptions Count (excluding cancelled)
+  const activeSubs = subscriptions.filter((s) => s.subscription_status !== "cancelled")
+  const activeSubscriptionsCount = activeSubs.length
 
   // 5. Due This Week Count (Next due date within today and today + 7 days)
   const today = new Date(referenceDate)
@@ -146,7 +147,7 @@ export function calculateDashboardAnalytics(
   const sevenDaysLater = new Date(today)
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7)
 
-  const dueThisWeekCount = subscriptions.filter((sub) => {
+  const dueThisWeekCount = activeSubs.filter((sub) => {
     // Treat next_due_date as local date (YYYY-MM-DD)
     const [y, m, d] = sub.next_due_date.split("-").map(Number)
     if (!y || !m || !d) return false
@@ -159,7 +160,7 @@ export function calculateDashboardAnalytics(
   let topSubCostStr = formatter.format(0)
   let topSubBillingCycle = "No active subscriptions"
 
-  if (subscriptions.length > 0) {
+  if (activeSubs.length > 0) {
     const getMonthlyEquivalent = (sub: Subscription) => {
       const cost = Number(sub.cost)
       if (sub.plan_type === "Weekly") return cost * (52 / 12)
@@ -167,7 +168,7 @@ export function calculateDashboardAnalytics(
       return cost // Monthly
     }
 
-    const sortedSubs = [...subscriptions].sort(
+    const sortedSubs = [...activeSubs].sort(
       (a, b) => getMonthlyEquivalent(b) - getMonthlyEquivalent(a)
     )
     const topSub = sortedSubs[0]

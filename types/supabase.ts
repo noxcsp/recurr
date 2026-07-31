@@ -197,7 +197,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      status: "paid" | "unpaid" | "overdue"
+      status: "paid" | "unpaid" | "overdue" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never

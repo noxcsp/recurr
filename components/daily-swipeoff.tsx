@@ -41,6 +41,7 @@ const statusStyles: Record<Subscription["subscription_status"], string> = {
   paid: "border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400",
   unpaid: "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400",
   overdue: "border-destructive text-destructive",
+  cancelled: "border-muted-foreground text-muted-foreground",
 }
 
 // ── Swipe threshold ─────────────────────────────────────────────────────────

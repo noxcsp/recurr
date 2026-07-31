@@ -85,6 +85,31 @@ export async function updateSubscription(
   return { success: true }
 }
 
+export async function cancelSubscription(id: string) {
+  const supabase = await createClient()
+
+  const { data: userData, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !userData?.user) {
+    return { error: "You must be logged in to cancel a subscription." }
+  }
+
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
+      subscription_status: "cancelled" as const,
+    })
+    .eq("id", id)
+    .eq("user_id", userData.user.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/home")
+  return { success: true }
+}
+
 export async function deleteSubscription(id: string) {
   const supabase = await createClient()
 

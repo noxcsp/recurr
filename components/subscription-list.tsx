@@ -15,11 +15,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Subscription } from "@/types/subscriptions"
-import { RefreshCw, Trash2 } from "lucide-react"
+import { RefreshCw, Trash2, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
-import { deleteSubscription, renewSubscription } from "@/app/home/actions"
+import { cancelSubscription, renewSubscription } from "@/app/home/actions"
 import { parseUtcToLocalDate } from "@/lib/utils/date"
+import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 
 interface SubscriptionListProps {
   subscriptions: Subscription[]
@@ -68,6 +69,13 @@ interface StatusBadgeInfo {
 }
 
 function getStatusBadge(sub: Subscription): StatusBadgeInfo | null {
+  if (sub.subscription_status === "cancelled") {
+    return {
+      label: "Cancelled",
+      className: "bg-muted text-muted-foreground border-transparent",
+    }
+  }
+
   if (sub.is_trial && sub.trial_end_date) {
     const trialDays = getTrialDaysRemaining(sub.trial_end_date)
     if (trialDays <= 7) {
@@ -99,14 +107,16 @@ const SWIPE_THRESHOLD = 40
 
 function SubscriptionCard({ sub }: { sub: Subscription }) {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [isRenewing, startRenewTransition] = useTransition()
-  const [isDeleting, startDeleteTransition] = useTransition()
+  const [isCancelling, startCancelTransition] = useTransition()
   const [swipeX, setSwipeX] = useState(0)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const isSwiping = useRef(false)
 
+  const isCancelled = sub.subscription_status === "cancelled"
   const dueDays = getDaysRemaining(sub.next_due_date)
   const statusBadge = getStatusBadge(sub)
 
@@ -136,52 +146,57 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
 
   const handleTouchEnd = () => {
     if (swipeX >= SWIPE_THRESHOLD) {
-      setDeleteDialogOpen(true)
+      setCancelDialogOpen(true)
     }
     setSwipeX(0)
     isSwiping.current = false
   }
 
-  const handleRenew = () => {
+  const handleRenewOrSubscribeAgain = () => {
     startRenewTransition(async () => {
       const result = await renewSubscription(sub.id)
       if (result?.error) {
-        toast.error("Failed to renew", {
+        toast.error(isCancelled ? "Failed to resubscribe" : "Failed to renew", {
           position: "top-right",
           description: result.error,
         })
       } else if (result?.success) {
-        toast.success("Subscription renewed", {
-          position: "top-right",
-          description: `${sub.service_name} has been marked as paid.`,
-        })
+        toast.success(
+          isCancelled ? "Subscription reactivated" : "Subscription renewed",
+          {
+            position: "top-right",
+            description: isCancelled
+              ? `${sub.service_name} is active again.`
+              : `${sub.service_name} has been marked as paid.`,
+          }
+        )
       }
       setRenewDialogOpen(false)
     })
   }
 
-  const handleDelete = () => {
-    startDeleteTransition(async () => {
-      const result = await deleteSubscription(sub.id)
+  const handleCancel = () => {
+    startCancelTransition(async () => {
+      const result = await cancelSubscription(sub.id)
       if (result?.error) {
-        toast.error("Failed to delete", {
+        toast.error("Failed to cancel subscription", {
           position: "top-right",
           description: result.error,
         })
       } else if (result?.success) {
         toast.success("Subscription cancelled", {
           position: "top-right",
-          description: `${sub.service_name} has been removed.`,
+          description: `${sub.service_name} status updated to cancelled.`,
         })
       }
-      setDeleteDialogOpen(false)
+      setCancelDialogOpen(false)
     })
   }
 
   return (
     <>
       <li className="relative overflow-hidden">
-        {/* Delete zone revealed on swipe */}
+        {/* Cancel zone revealed on swipe */}
         <div
           className="absolute inset-y-0 right-0 flex items-center justify-center bg-destructive/10 px-4"
           style={{ width: `${swipeX}px` }}
@@ -203,8 +218,11 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Card body */}
-          <div className="flex items-center justify-between px-3 py-2.5 text-left">
+          {/* Card body - clicking opens Edit Form */}
+          <div
+            className="flex items-center justify-between px-3 py-2.5 text-left cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => setEditDialogOpen(true)}
+          >
             <div className="space-y-0.5">
               <div className="text-sm font-semibold text-foreground md:text-base lg:text-base">
                 {sub.service_name}
@@ -240,43 +258,80 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
               <span className="text-[11px] text-muted-foreground md:text-xs lg:text-xs">
                 {formatDueDate(sub.next_due_date)}
               </span>
-              <span
-                className={cn(
-                  "ml-auto text-[11px] font-medium md:text-xs lg:text-xs",
-                  getCountdownColorClass(dueDays)
-                )}
-              >
-                {getCountdownText(dueDays)}
-              </span>
+              {!isCancelled && (
+                <span
+                  className={cn(
+                    "ml-auto text-[11px] font-medium md:text-xs lg:text-xs",
+                    getCountdownColorClass(dueDays)
+                  )}
+                >
+                  {getCountdownText(dueDays)}
+                </span>
+              )}
             </div>
 
-            {/* Renew button */}
-            <Button
-              type="button"
-              variant="default"
-              size="xs"
-              className="w-full rounded-none py-3.5"
-              onClick={() => setRenewDialogOpen(true)}
-              disabled={isRenewing}
-            >
-              <RefreshCw className="size-3" data-icon="inline-start" />
-              {isRenewing ? "Renewing..." : "Renew"}
-            </Button>
+            {/* Action button: "Subscribe Again" if cancelled, "Renew" otherwise */}
+            {isCancelled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="w-full rounded-none py-3.5"
+                onClick={() => setRenewDialogOpen(true)}
+                disabled={isRenewing}
+              >
+                <RotateCcw className="size-3" data-icon="inline-start" />
+                {isRenewing ? "Reactivating..." : "Subscribe Again"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="default"
+                size="xs"
+                className="w-full rounded-none py-3.5"
+                onClick={() => setRenewDialogOpen(true)}
+                disabled={isRenewing}
+              >
+                <RefreshCw className="size-3" data-icon="inline-start" />
+                {isRenewing ? "Renewing..." : "Renew"}
+              </Button>
+            )}
           </div>
         </div>
       </li>
 
-      {/* Renew AlertDialog */}
+      {/* Edit Form Modal */}
+      <EditSubscriptionForm
+        subscription={sub}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
+
+      {/* Renew / Subscribe Again AlertDialog */}
       <AlertDialog open={renewDialogOpen} onOpenChange={setRenewDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark as Paid?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isCancelled ? "Subscribe Again?" : "Mark as Paid?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will mark{" "}
-              <span className="font-medium text-foreground">
-                {sub.service_name}
-              </span>{" "}
-              as paid and advance the due date to the next billing cycle.
+              {isCancelled ? (
+                <>
+                  This will reactivate{" "}
+                  <span className="font-medium text-foreground">
+                    {sub.service_name}
+                  </span>{" "}
+                  and update its status to paid.
+                </>
+              ) : (
+                <>
+                  This will mark{" "}
+                  <span className="font-medium text-foreground">
+                    {sub.service_name}
+                  </span>{" "}
+                  as paid and advance the due date to the next billing cycle.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -284,7 +339,7 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleRenew}
+              onClick={handleRenewOrSubscribeAgain}
               disabled={isRenewing}
               className={cn(buttonVariants({ variant: "default" }), "rounded-none")}
             >
@@ -294,28 +349,29 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete AlertDialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Cancel Subscription AlertDialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove{" "}
+              This will update the status of{" "}
               <span className="font-medium text-foreground">
                 {sub.service_name}
-              </span>
-              . This action cannot be undone.
+              </span>{" "}
+              to cancelled. You can subscribe again at any time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
+            <AlertDialogCancel disabled={isCancelling}>
               Keep
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className={cn(buttonVariants({ variant: "destructive" }), "rounded-none")}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isCancelling ? "Cancelling..." : "Cancel Subscription"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
