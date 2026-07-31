@@ -7,17 +7,17 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingDown, TrendingUp, Minus } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 
 export interface DashboardMetricsProps {
-  monthlySpend?: string
+  monthlySpend?: string | number
   spendTrend?: "up" | "down" | "flat"
   trendPercentage?: string
   trendLabel?: string
   activeSubscriptionsCount?: number
   dueThisWeekCount?: number
   topSubscriptionName?: string
-  topSubscriptionCost?: string
+  topSubscriptionCost?: string | number
   topSubscriptionBillingCycle?: string
   isLoading?: boolean
   className?: string
@@ -75,14 +75,14 @@ export function DashboardMetricsSkeleton({ className }: { className?: string }) 
 }
 
 export function DashboardMetrics({
-  monthlySpend = "₱0.00",
+  monthlySpend = formatCurrency(0),
   spendTrend = "flat",
   trendPercentage = "0%",
   trendLabel = "no change from last month",
   activeSubscriptionsCount = 0,
   dueThisWeekCount = 0,
   topSubscriptionName = "N/A",
-  topSubscriptionCost = "₱0.00",
+  topSubscriptionCost = formatCurrency(0),
   topSubscriptionBillingCycle = "No active subscriptions",
   isLoading = false,
   className,
@@ -90,6 +90,13 @@ export function DashboardMetrics({
   if (isLoading) {
     return <DashboardMetricsSkeleton className={className} />
   }
+
+  const formattedMonthlySpend =
+    typeof monthlySpend === "number" ? formatCurrency(monthlySpend) : monthlySpend
+  const formattedTopCost =
+    typeof topSubscriptionCost === "number"
+      ? formatCurrency(topSubscriptionCost)
+      : topSubscriptionCost
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Monthly Spend Card */}
@@ -99,7 +106,7 @@ export function DashboardMetrics({
             Monthly Spend
           </CardDescription>
           <CardTitle className="text-4xl font-sans tracking-tight text-foreground md:text-5xl lg:text-6xl">
-            {monthlySpend}
+            {formattedMonthlySpend}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -135,7 +142,7 @@ export function DashboardMetrics({
             <CardDescription className="text-xs font-sans font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
               Active Subs
             </CardDescription>
-            <CardTitle className="text-3xl font-sans text-foreground md:text-4xl lg:text-5xl">
+            <CardTitle className="text-3xl font-sans text-success md:text-4xl lg:text-5xl">
               {activeSubscriptionsCount}
             </CardTitle>
           </CardHeader>
@@ -166,7 +173,7 @@ export function DashboardMetrics({
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-base font-medium text-foreground md:text-lg lg:text-xl">
-            {topSubscriptionCost}
+            {formattedTopCost}
           </p>
           <p className="text-xs font-normal text-muted-foreground md:text-xs lg:text-sm">
             {topSubscriptionBillingCycle}

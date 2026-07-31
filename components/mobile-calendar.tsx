@@ -16,7 +16,7 @@ import { AddSubscriptionForm } from "@/components/add-subscription-form"
 import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { AddSubscriptionButton } from "@/components/add-subscription-button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 
 const localizer = dateFnsLocalizer({
   format,
@@ -168,7 +168,7 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
         return {
           title: sub.is_trial
             ? `${sub.service_name} (Trial Ends)`
-            : `${sub.service_name} — ₱${sub.cost.toLocaleString()}`,
+            : `${sub.service_name} — ${formatCurrency(sub.cost)}`,
           start: dueDate,
           end: dueDate,
           allDay: true,
@@ -375,7 +375,7 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
                         </span>
                       </div>
                       <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground md:text-base">
-                        ₱{sub.cost.toLocaleString()}
+                        {formatCurrency(sub.cost)}
                       </span>
                     </div>
                   </button>

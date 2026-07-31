@@ -1,6 +1,7 @@
 import type { Subscription } from "@/types/subscriptions"
 import type { PaymentRecord, DashboardAnalytics } from "@/types/analytics"
 import type { OverdueSubscriptionItem } from "@/components/overdue-subscriptions"
+import { formatCurrency } from "@/lib/utils"
 
 /**
  * Calculates the number of overdue subscriptions and returns formatted list items.
@@ -12,13 +13,6 @@ export function getOverdueSubscriptions(
 ): { count: number; overdueItems: OverdueSubscriptionItem[] } {
   const today = new Date(referenceDate)
   today.setHours(0, 0, 0, 0)
-
-  const formatter = new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
 
   const overdueList = subscriptions.filter((sub) => {
     if (sub.subscription_status === "overdue") return true
@@ -50,7 +44,7 @@ export function getOverdueSubscriptions(
       name: sub.service_name,
       billingCycle: sub.plan_type,
       daysOverdue: diffDays === 1 ? "1 day" : `${diffDays} days`,
-      price: formatter.format(Number(sub.cost)),
+      price: formatCurrency(Number(sub.cost)),
       imageUrl: "",
     }
   })
@@ -72,12 +66,6 @@ export function calculateDashboardAnalytics(
 ): DashboardAnalytics {
   const currentYear = referenceDate.getFullYear()
   const currentMonth = referenceDate.getMonth()
-  const formatter = new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
   // Previous month calculations (handles January -> December transition)
   const prevMonthDate = new Date(referenceDate)
@@ -120,23 +108,23 @@ export function calculateDashboardAnalytics(
     } else if (diff > 0) {
       const pct = Math.round((diff / previousMonthSpend) * 100)
       spendTrend = "up"
-      trendPercentage = `${pct}% (+${formatter.format(diff)})`
+      trendPercentage = `${pct}% (+${formatCurrency(diff)})`
       trendLabel = "increased from last month"
     } else {
       const absDiff = Math.abs(diff)
       const pct = Math.round((absDiff / previousMonthSpend) * 100)
       spendTrend = "down"
-      trendPercentage = `${pct}% (-${formatter.format(absDiff)})`
+      trendPercentage = `${pct}% (-${formatCurrency(absDiff)})`
       trendLabel = "decreased from last month"
     }
   } else if (currentMonthSpend > 0) {
     // First-tracked baseline month: Use 'flat' so it displays in neutral text rather than alarmist red
     spendTrend = "flat"
-    trendPercentage = `+${formatter.format(currentMonthSpend)}`
+    trendPercentage = `+${formatCurrency(currentMonthSpend)}`
     trendLabel = "new spend this month"
   } else {
     spendTrend = "flat"
-    trendPercentage = formatter.format(0)
+    trendPercentage = formatCurrency(0)
     trendLabel = "no spend this month"
   }
 
@@ -161,7 +149,7 @@ export function calculateDashboardAnalytics(
 
   // 6. Top Subscription (highest normalized monthly cost)
   let topSubName = "N/A"
-  let topSubCostStr = formatter.format(0)
+  let topSubCostStr = formatCurrency(0)
   let topSubBillingCycle = "No active subscriptions"
 
   if (activeSubs.length > 0) {
@@ -178,7 +166,7 @@ export function calculateDashboardAnalytics(
     const topSub = sortedSubs[0]
 
     topSubName = topSub.service_name
-    topSubCostStr = formatter.format(Number(topSub.cost))
+    topSubCostStr = formatCurrency(Number(topSub.cost))
 
     if (topSub.plan_type === "Monthly") {
       topSubBillingCycle = "Billed monthly"
@@ -192,8 +180,8 @@ export function calculateDashboardAnalytics(
   // 7. Overdue Subscriptions
   const overdueData = getOverdueSubscriptions(subscriptions, referenceDate)
 
-  const formattedMonthlySpend = formatter.format(currentMonthSpend)
-  const formattedYearlySpend = formatter.format(currentYearSpend)
+  const formattedMonthlySpend = formatCurrency(currentMonthSpend)
+  const formattedYearlySpend = formatCurrency(currentYearSpend)
 
   return {
     monthlySpend: formattedMonthlySpend,

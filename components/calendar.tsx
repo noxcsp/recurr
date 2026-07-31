@@ -13,7 +13,7 @@ import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { updateSubscription } from "@/app/home/actions"
 import { toast } from "sonner"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import { toUtcDate } from "@/lib/utils/date"
 
 const DnDCalendar = withDragAndDrop<SubscriptionEvent>(
@@ -134,7 +134,7 @@ export function SubscriptionCalendar({
         return {
           title: sub.is_trial
             ? `${sub.service_name} (Trial Ends)`
-            : `${sub.service_name} — ₱${sub.cost.toLocaleString()}`,
+            : `${sub.service_name} — ${formatCurrency(sub.cost)}`,
           start: dueDate,
           end: dueDate, // Always start = end to prevent date range spanning
           allDay: true,

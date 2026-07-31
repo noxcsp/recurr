@@ -9,7 +9,7 @@ import {
   animate,
 } from "motion/react"
 import { Check, X, CreditCard, CalendarDays, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { completeSwipeoff } from "@/app/home/swipeoff-actions"
@@ -482,7 +482,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
             Cost
           </span>
           <span className="mt-1 text-2xl font-bold tabular-nums leading-tight text-foreground md:text-3xl lg:text-4xl">
-            ₱{sub.cost.toLocaleString()}
+            {formatCurrency(sub.cost)}
           </span>
         </div>
 
