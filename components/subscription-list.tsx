@@ -150,10 +150,9 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
   const isSwiping = useRef(false)
 
   const stageCancellation = useSubscriptionStore((s) => s.stageCancellation)
+  const stageReactivation = useSubscriptionStore((s) => s.stageReactivation)
   const undoCancellation = useSubscriptionStore((s) => s.undoCancellation)
-  const getEffectiveStatus = useSubscriptionStore((s) => s.getEffectiveStatus)
-
-  const effectiveStatus = getEffectiveStatus(sub)
+  const effectiveStatus = useSubscriptionStore((s) => s.getEffectiveStatus(sub))
   const isCancelled = effectiveStatus === "cancelled"
   const isTrial = sub.is_trial && !!sub.trial_end_date
   const refDateStr = isTrial ? sub.trial_end_date : sub.next_due_date
@@ -322,11 +321,10 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
                 variant="outline"
                 size="xs"
                 className="w-full rounded-none py-3.5"
-                onClick={() => setRenewDialogOpen(true)}
-                disabled={isRenewing}
+                onClick={() => stageReactivation(sub)}
               >
                 <RotateCcw className="size-3" data-icon="inline-start" />
-                {isRenewing ? "Reactivating..." : "Subscribe Again"}
+                Subscribe Again
               </Button>
             ) : isTrial && dueDays < 0 ? (
               <div className="grid grid-cols-2 gap-2 w-full">

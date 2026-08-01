@@ -1,43 +1,60 @@
 import { create } from "zustand"
 import type { Subscription } from "@/types/subscriptions"
-import { cancelSubscription } from "@/app/home/actions"
+import { cancelSubscription, renewSubscription } from "@/app/home/actions"
 import { toast } from "@/hooks/use-toast"
 
-export interface PendingCancellation {
+export interface PendingAction {
   subscription: Subscription
   originalStatus: Subscription["subscription_status"]
-  timerId: ReturnType<typeof setTimeout>
   toastId: string
   isUndone: boolean
 }
 
 interface SubscriptionStoreState {
-  pendingCancellations: Record<string, PendingCancellation>
+  pendingCancellations: Record<string, PendingAction>
+  pendingReactivations: Record<string, PendingAction>
+  committedStatuses: Record<string, Subscription["subscription_status"]>
   stageCancellation: (sub: Subscription) => void
   undoCancellation: (subId: string) => void
   commitCancellation: (subId: string) => Promise<void>
+  stageReactivation: (sub: Subscription) => void
+  undoReactivation: (subId: string) => void
+  commitReactivation: (subId: string) => Promise<void>
   getEffectiveStatus: (sub: Subscription) => Subscription["subscription_status"]
 }
 
 export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) => ({
   pendingCancellations: {},
+  pendingReactivations: {},
+  committedStatuses: {},
 
   stageCancellation: (sub: Subscription) => {
-    const existing = get().pendingCancellations[sub.id]
-    if (existing) {
-      clearTimeout(existing.timerId)
-      if (existing.toastId) {
-        toast.dismiss(existing.toastId)
-      }
+    const existingCancel = get().pendingCancellations[sub.id]
+    if (existingCancel && existingCancel.toastId) {
+      toast.dismiss(existingCancel.toastId)
     }
 
-    let toastId = ""
+    const existingReact = get().pendingReactivations[sub.id]
+    if (existingReact) {
+      if (existingReact.toastId) {
+        toast.dismiss(existingReact.toastId)
+      }
+      set((state) => {
+        const nextMap = { ...state.pendingReactivations }
+        delete nextMap[sub.id]
+        return { pendingReactivations: nextMap }
+      })
+    }
 
-    const timerId = setTimeout(() => {
-      get().commitCancellation(sub.id)
-    }, 5000)
+    if (get().committedStatuses[sub.id]) {
+      set((state) => {
+        const next = { ...state.committedStatuses }
+        delete next[sub.id]
+        return { committedStatuses: next }
+      })
+    }
 
-    toastId = toast.info("Subscription cancelled", {
+    const toastId = toast.info("Subscription cancelled", {
       description: `${sub.service_name} marked as cancelled.`,
       timeout: 5000,
       actionProps: {
@@ -49,7 +66,6 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
       onClose: () => {
         const pending = get().pendingCancellations[sub.id]
         if (pending && !pending.isUndone) {
-          clearTimeout(pending.timerId)
           get().commitCancellation(sub.id)
         }
       },
@@ -61,7 +77,6 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
         [sub.id]: {
           subscription: sub,
           originalStatus: sub.subscription_status,
-          timerId,
           toastId,
           isUndone: false,
         },
@@ -74,7 +89,6 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     if (!pending) return
 
     pending.isUndone = true
-    clearTimeout(pending.timerId)
     if (pending.toastId) {
       toast.dismiss(pending.toastId)
     }
@@ -91,29 +105,150 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     if (!pending || pending.isUndone) return
 
     set((state) => {
-      const nextMap = { ...state.pendingCancellations }
-      delete nextMap[subId]
-      return { pendingCancellations: nextMap }
+      const nextPending = { ...state.pendingCancellations }
+      delete nextPending[subId]
+      return {
+        pendingCancellations: nextPending,
+        committedStatuses: {
+          ...state.committedStatuses,
+          [subId]: "cancelled",
+        },
+      }
     })
 
     const result = await cancelSubscription(subId)
     if (result?.error) {
+      set((state) => {
+        const nextCommitted = { ...state.committedStatuses }
+        delete nextCommitted[subId]
+        return { committedStatuses: nextCommitted }
+      })
       toast.error("Failed to cancel subscription", {
-        position: "top-right",
         description: result.error,
       })
-    } else if (result?.success) {
-      toast.success("Subscription cancelled", {
-        position: "top-right",
-        description: `${pending.subscription.service_name} status updated to cancelled.`,
+    }
+  },
+
+  stageReactivation: (sub: Subscription) => {
+    const existingReact = get().pendingReactivations[sub.id]
+    if (existingReact && existingReact.toastId) {
+      toast.dismiss(existingReact.toastId)
+    }
+
+    const existingCancel = get().pendingCancellations[sub.id]
+    if (existingCancel) {
+      if (existingCancel.toastId) {
+        toast.dismiss(existingCancel.toastId)
+      }
+      set((state) => {
+        const nextMap = { ...state.pendingCancellations }
+        delete nextMap[sub.id]
+        return { pendingCancellations: nextMap }
+      })
+    }
+
+    if (get().committedStatuses[sub.id]) {
+      set((state) => {
+        const next = { ...state.committedStatuses }
+        delete next[sub.id]
+        return { committedStatuses: next }
+      })
+    }
+
+    const toastId = toast.info("Subscription reactivated", {
+      description: `${sub.service_name} marked as active.`,
+      timeout: 5000,
+      actionProps: {
+        children: "Undo",
+        onClick: () => {
+          get().undoReactivation(sub.id)
+        },
+      },
+      onClose: () => {
+        const pending = get().pendingReactivations[sub.id]
+        if (pending && !pending.isUndone) {
+          get().commitReactivation(sub.id)
+        }
+      },
+    })
+
+    set((state) => ({
+      pendingReactivations: {
+        ...state.pendingReactivations,
+        [sub.id]: {
+          subscription: sub,
+          originalStatus: sub.subscription_status,
+          toastId,
+          isUndone: false,
+        },
+      },
+    }))
+  },
+
+  undoReactivation: (subId: string) => {
+    const pending = get().pendingReactivations[subId]
+    if (!pending) return
+
+    pending.isUndone = true
+    if (pending.toastId) {
+      toast.dismiss(pending.toastId)
+    }
+
+    set((state) => {
+      const nextMap = { ...state.pendingReactivations }
+      delete nextMap[subId]
+      return { pendingReactivations: nextMap }
+    })
+  },
+
+  commitReactivation: async (subId: string) => {
+    const pending = get().pendingReactivations[subId]
+    if (!pending || pending.isUndone) return
+
+    set((state) => {
+      const nextPending = { ...state.pendingReactivations }
+      delete nextPending[subId]
+      return {
+        pendingReactivations: nextPending,
+        committedStatuses: {
+          ...state.committedStatuses,
+          [subId]: "unpaid",
+        },
+      }
+    })
+
+    const result = await renewSubscription(subId, "today")
+    if (result?.error) {
+      set((state) => {
+        const nextCommitted = { ...state.committedStatuses }
+        delete nextCommitted[subId]
+        return { committedStatuses: nextCommitted }
+      })
+      toast.error("Failed to reactivate subscription", {
+        description: result.error,
       })
     }
   },
 
   getEffectiveStatus: (sub: Subscription) => {
-    const pending = get().pendingCancellations[sub.id]
-    if (pending && !pending.isUndone) {
+    const pendingCancel = get().pendingCancellations[sub.id]
+    if (pendingCancel && !pendingCancel.isUndone) {
       return "cancelled"
+    }
+    const pendingReact = get().pendingReactivations[sub.id]
+    if (pendingReact && !pendingReact.isUndone) {
+      return "unpaid"
+    }
+    const committed = get().committedStatuses[sub.id]
+    if (committed) {
+      if (
+        sub.subscription_status === committed ||
+        (committed === "unpaid" && sub.subscription_status !== "cancelled")
+      ) {
+        delete get().committedStatuses[sub.id]
+      } else {
+        return committed
+      }
     }
     return sub.subscription_status
   },
