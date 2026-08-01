@@ -35,7 +35,7 @@ function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        "group/toast pointer-events-auto absolute right-0 top-0 z-[calc(1000-var(--toast-index))] w-full origin-top rounded-lg border bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "group/toast pointer-events-auto absolute right-0 top-0 z-[calc(1000-var(--toast-index))] w-full origin-top rounded-none border border-border bg-popover text-popover-foreground shadow-none will-change-transform outline-none select-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
         "[--gap:0.75rem] [--height:var(--toast-frontmost-height,var(--toast-height))] [--offset-y:calc(var(--toast-offset-y)+calc(var(--toast-index)*var(--gap))+var(--toast-swipe-movement-y))] [--peek:0.75rem] [--scale:calc(max(0,1-(var(--toast-index)*0.1)))] [--shrink:calc(1-var(--scale))]",
         "h-[var(--height)] [transform:translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)+(var(--toast-index)*var(--peek))+(var(--shrink)*var(--height))))_scale(var(--scale))] [transition:transform_500ms_cubic-bezier(0.22,1,0.36,1),opacity_500ms,height_150ms]",
         "after:absolute after:bottom-full after:left-0 after:h-[calc(var(--gap)+1px)] after:w-full after:content-['']",
@@ -95,14 +95,14 @@ function ToastDescription({
 
 function ToastAction({
   className,
-  render = <Button variant="outline" size="sm" />,
+  render = <Button variant="outline" size="xs" className="rounded-none" />,
   ...props
 }: ToastPrimitive.Action.Props) {
   return (
     <ToastPrimitive.Action
       data-slot="toast-action"
       render={render}
-      className={cn("shrink-0", className)}
+      className={cn("shrink-0 rounded-none", className)}
       {...props}
     />
   )
@@ -179,6 +179,20 @@ function ToastIcon({ type }: { type: string | undefined }) {
   )
 }
 
+function ToastCountdown({ timeout }: { timeout?: number }) {
+  if (!timeout || timeout <= 0) return null
+
+  return (
+    <div
+      data-slot="toast-countdown"
+      className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground/40 origin-left animate-toast-countdown pointer-events-none"
+      style={{
+        animationDuration: `${timeout}ms`,
+      }}
+    />
+  )
+}
+
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
 
@@ -193,9 +207,11 @@ function ToastList() {
         <ToastAction />
         <ToastClose />
       </ToastContent>
+      <ToastCountdown timeout={toastItem.timeout} />
     </Toast>
   ))
 }
+
 
 function Toaster({
   children,

@@ -21,6 +21,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { cancelSubscription, renewSubscription } from "@/app/home/actions"
 import { parseUtcToLocalDate } from "@/lib/utils/date"
 import { EditSubscriptionForm } from "@/components/edit-subscription-form"
+import { useSubscriptionStore } from "@/lib/store/use-subscription-store"
 
 interface SubscriptionListProps {
   subscriptions: Subscription[]
@@ -140,21 +141,24 @@ const SWIPE_THRESHOLD = 40
 
 function SubscriptionCard({ sub }: { sub: Subscription }) {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedStartMode, setSelectedStartMode] = useState<"trial_end" | "today">("trial_end")
   const [isRenewing, startRenewTransition] = useTransition()
-  const [isCancelling, startCancelTransition] = useTransition()
   const [swipeX, setSwipeX] = useState(0)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const isSwiping = useRef(false)
 
-  const isCancelled = sub.subscription_status === "cancelled"
+  const stageCancellation = useSubscriptionStore((s) => s.stageCancellation)
+  const undoCancellation = useSubscriptionStore((s) => s.undoCancellation)
+  const getEffectiveStatus = useSubscriptionStore((s) => s.getEffectiveStatus)
+
+  const effectiveStatus = getEffectiveStatus(sub)
+  const isCancelled = effectiveStatus === "cancelled"
   const isTrial = sub.is_trial && !!sub.trial_end_date
   const refDateStr = isTrial ? sub.trial_end_date : sub.next_due_date
   const dueDays = getDaysRemaining(refDateStr)
-  const statusBadge = getStatusBadge(sub)
+  const statusBadge = getStatusBadge({ ...sub, subscription_status: effectiveStatus })
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
@@ -182,13 +186,14 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
 
   const handleTouchEnd = () => {
     if (swipeX >= SWIPE_THRESHOLD) {
-      setCancelDialogOpen(true)
+      stageCancellation(sub)
     }
     setSwipeX(0)
     isSwiping.current = false
   }
 
   const handleRenewOrSubscribeAgain = (startDateMode: "today" | "trial_end" = "today") => {
+    undoCancellation(sub.id)
     startRenewTransition(async () => {
       const result = await renewSubscription(sub.id, startDateMode)
       if (result?.error) {
@@ -224,23 +229,6 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
     })
   }
 
-  const handleCancel = () => {
-    startCancelTransition(async () => {
-      const result = await cancelSubscription(sub.id)
-      if (result?.error) {
-        toast.error("Failed to cancel subscription", {
-          position: "top-right",
-          description: result.error,
-        })
-      } else if (result?.success) {
-        toast.success("Subscription cancelled", {
-          position: "top-right",
-          description: `${sub.service_name} status updated to cancelled.`,
-        })
-      }
-      setCancelDialogOpen(false)
-    })
-  }
 
   return (
     <>
@@ -347,8 +335,7 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
                   variant="outline"
                   size="xs"
                   className="w-full rounded-none py-3.5"
-                  onClick={() => setCancelDialogOpen(true)}
-                  disabled={isCancelling}
+                  onClick={() => stageCancellation(sub)}
                 >
                   <X className="size-3" data-icon="inline-start" />
                   Didn&apos;t Renew
@@ -511,37 +498,10 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Cancel Subscription AlertDialog */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will update the status of{" "}
-              <span className="font-medium text-foreground">
-                {sub.service_name}
-              </span>{" "}
-              to cancelled. You can subscribe again at any time.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling}>
-              Keep
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              disabled={isCancelling}
-              className={cn(buttonVariants({ variant: "destructive" }), "rounded-none")}
-            >
-              {isCancelling ? "Cancelling..." : "Cancel Subscription"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }
+
 
 export function SubscriptionList({ subscriptions, emptyMessage }: SubscriptionListProps) {
   if (subscriptions.length === 0) {
