@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { deleteAccount, signout } from "@/app/auth/actions"
 import { NotificationSettings } from "@/components/notification-settings"
+import { ThemeSettings } from "@/components/theme-settings"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -84,6 +85,9 @@ export function SettingsTab() {
 
       {/* Granular Notification Settings */}
       <NotificationSettings user={user} profile={profile} />
+
+      {/* Theme Settings */}
+      <ThemeSettings />
 
       {/* Danger Zone */}
       <div className="border-b border-border px-4 py-4">

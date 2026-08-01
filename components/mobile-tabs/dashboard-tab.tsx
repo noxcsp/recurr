@@ -3,7 +3,6 @@
 import { useHomeData } from "@/contexts/home-data-context"
 import { DashboardMetrics } from "@/components/dashboard-metrics"
 import { OverdueSubscriptions } from "@/components/overdue-subscriptions"
-import { ToastTypes } from "../toast-types"
 
 function getTimeBasedGreeting(): string {
   const hour = new Date().getHours()
@@ -28,7 +27,6 @@ export function DashboardTab() {
           {displayName ? `${greeting}, ${displayName}!` : `${greeting}!`}
         </h1>
       </div>
-      <ToastTypes/>
       <DashboardMetrics
         monthlySpend={analytics?.monthlySpend}
         spendTrend={analytics?.spendTrend}
