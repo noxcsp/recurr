@@ -23,7 +23,7 @@ The application provides a centralized calendar view, automated push reminders, 
 *   **Subscription CRUD Operations:** 
     *   **Add New Subscription:** Users can tap any date grid or an action button to open a creation modal. Configurable fields include title, cost, payment mode, billing cycle (`Weekly`, `Monthly`, `Annual`), due date, and optional trial details.
     *   **Edit Existing Subscription:** Selecting a subscription event on the calendar opens an inline or modal editing pane allowing users to adjust pricing, tracking details, or manually override payment statuses.
-    *   **Delete Subscription:** Immediate removal capabilities directly from the detailed subscription view.
+    *   **Cancel Subscription:** Mark subscription as cancelled and exclude from analytics calculation.
 
 ### 3.2. Daily Swipe-off Flow & Payment Processing
 *   **Trigger:** Displayed as a modal exactly once per calendar day at the user’s first opening of the PWA (tracked via `profiles.last_swipeoff_date`).
@@ -31,7 +31,7 @@ The application provides a centralized calendar view, automated push reminders, 
 *   **Interactions & Database Trigger:**
     *   **Swipe Right (Paid):** Updates `subscription_status` to `'paid'`. The database trigger (`trg_process_subscription_payment`) automatically logs a payment entry into `subscription_payments`, shifts `next_due_date` forward by one cycle (`1 week`, `1 month`, or `1 year`), and resets status to `'unpaid'`.
     *   **Swipe Left:** Dismisses the card, leaving the status as `'unpaid'`.
-*   **Fallback Integrity:** If a user swipes left or dismisses the modal, they can manually mark the subscription as `'paid'` in the calendar later.
+*   **Fallback Integrity:** If a user swipes left or dismisses the modal, they can manually mark the subscription as `'paid'` in the subscriptions list later.
 
 ### 3.3. Payment Ledger & History
 *   **Payment Tracking:** Automatic audit ledger stored in `subscription_payments` recording each payment event (`service_name`, `amount`, `plan_type`, `payment_date`).
