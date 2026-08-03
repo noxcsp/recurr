@@ -43,14 +43,37 @@ function getTrialDaysRemaining(dateStr: string | null): number {
   return getDaysRemaining(dateStr)
 }
 
+function formatDuration(totalDays: number): string {
+  const years = Math.floor(totalDays / 365)
+  const remainingAfterYears = totalDays % 365
+  const months = Math.floor(remainingAfterYears / 30)
+  const days = remainingAfterYears % 30
+
+  const parts: string[] = []
+  if (years > 0) {
+    parts.push(`${years} ${years === 1 ? "year" : "years"}`)
+  }
+  if (months > 0) {
+    parts.push(`${months} ${months === 1 ? "month" : "months"}`)
+  }
+  if (days > 0) {
+    parts.push(`${days} ${days === 1 ? "day" : "days"}`)
+  }
+
+  if (parts.length === 0) {
+    return "0 days"
+  }
+
+  return parts.join(", ")
+}
+
 function getCountdownText(days: number): string {
   if (days < 0) {
-    const absDays = Math.abs(days)
-    return `Expired ${absDays} ${absDays === 1 ? "day" : "days"} ago`
+    return `Expired ${formatDuration(Math.abs(days))} ago`
   }
   if (days === 0) return "Today"
   if (days === 1) return "Tomorrow"
-  return `in ${days} days`
+  return `in ${formatDuration(days)}`
 }
 
 function getCountdownColorClass(days: number): string {

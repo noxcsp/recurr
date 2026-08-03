@@ -215,8 +215,8 @@ export function NotificationSettings({ user, profile }: NotificationSettingsProp
             {isPermissionDenied
               ? "Push notifications are currently blocked by browser hardware permissions."
               : pushEnabled
-              ? "Active. Device is registered to receive FCM subscription alerts."
-              : "Disabled. Turn on to receive push alerts before renewals."}
+                ? "Active. Device is registered to receive subscription alerts."
+                : "Disabled. Turn on to receive push alerts before renewals."}
           </CardDescription>
         </CardHeader>
       </Card>
