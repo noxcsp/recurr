@@ -50,7 +50,7 @@ import {
   CheckCircle2,
   Search,
 } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 
 import { addSubscription } from "@/app/home/actions"
 import {
@@ -67,6 +67,7 @@ import {
 } from "@/lib/constants/subscription-templates"
 import { useSubscriptionWizardStore } from "@/lib/store/use-subscription-wizard-store"
 import { SUBSCRIPTION_CATEGORIES } from "@/lib/constants/categories"
+import { formatCurrency } from "@/lib/utils"
 
 const CATEGORY_OPTIONS = ["All", ...SUBSCRIPTION_CATEGORIES]
 
@@ -125,7 +126,7 @@ export function AddSubscriptionForm({
   } = useSubscriptionWizardStore()
 
   const isCalendarTriggered = !!defaultDate
-  const totalSteps = isCalendarTriggered ? 4 : 5
+  const totalSteps = draftData.is_trial ? 4 : isCalendarTriggered ? 4 : 5
 
   // Define Steps
   const wizardSteps: StepItem[] = [
@@ -133,7 +134,7 @@ export function AddSubscriptionForm({
     { id: 2, title: "Plan", description: "Tier & cost" },
     { id: 3, title: "Payment", description: "Method" },
     { id: 4, title: "Trial", description: "Free duration" },
-    ...(!isCalendarTriggered
+    ...(!isCalendarTriggered && !draftData.is_trial
       ? [{ id: 5, title: "Due Date", description: "Billing cycle" }]
       : []),
   ]
@@ -212,20 +213,31 @@ export function AddSubscriptionForm({
   const handleFinalSubmit = () => {
     setError(null)
 
-    const resolvedDueDate =
-      draftData.next_due_date ||
-      (defaultDate ? parseUtcToLocalDate(defaultDate) : undefined)
+    let resolvedDueDate: Date | undefined = undefined
+    if (!draftData.is_trial) {
+      resolvedDueDate =
+        draftData.next_due_date ||
+        (defaultDate ? parseUtcToLocalDate(defaultDate) : undefined)
 
-    if (!resolvedDueDate) {
-      setError("Please select a next due date.")
-      if (!isCalendarTriggered) setStep(5)
-      return
+      if (!resolvedDueDate) {
+        setError("Please select a next due date.")
+        if (!isCalendarTriggered) setStep(5)
+        return
+      }
+    } else {
+      if (!draftData.trial_end_date) {
+        setError("Please select a trial end date.")
+        setStep(4)
+        return
+      }
     }
 
-    const calculatedStatus = computeSubscriptionStatus(
-      resolvedDueDate,
-      draftData.isStartedToday
-    )
+    const calculatedStatus = draftData.is_trial
+      ? "unpaid"
+      : computeSubscriptionStatus(
+          resolvedDueDate,
+          draftData.isStartedToday
+        )
 
     // Form final validation check
     const finalValues: SubscriptionFormValues = {
@@ -234,7 +246,7 @@ export function AddSubscriptionForm({
       cost: Number(draftData.cost) || 0,
       plan_type: (draftData.plan_type as "Weekly" | "Monthly" | "Annual") || "Monthly",
       payment_mode: draftData.payment_mode || "Other",
-      next_due_date: toUtcDate(resolvedDueDate)!,
+      next_due_date: resolvedDueDate ? toUtcDate(resolvedDueDate)! : (undefined as unknown as Date),
       is_trial: !!draftData.is_trial,
       trial_end_date: draftData.is_trial && draftData.trial_end_date
         ? toUtcDate(draftData.trial_end_date)
@@ -287,7 +299,14 @@ export function AddSubscriptionForm({
         setError("Please select a payment method.")
         return
       }
-    } else if (currentStep === 5 && !isCalendarTriggered) {
+    } else if (currentStep === 4 && draftData.is_trial) {
+      if (!draftData.trial_end_date) {
+        setError("Please select a trial end date.")
+        return
+      }
+      handleFinalSubmit()
+      return
+    } else if (currentStep === 5 && !isCalendarTriggered && !draftData.is_trial) {
       if (!draftData.next_due_date) {
         setError("Please select a next due date.")
         return
@@ -572,10 +591,11 @@ export function AddSubscriptionForm({
                               plan_type: plan.plan_type,
                             })
                           }}
-                          className={`w-full flex items-center justify-between p-3.5 border transition-all text-left rounded-none ${isSelected
+                          className={`w-full flex items-center justify-between p-3.5 border transition-all text-left rounded-none ${
+                            isSelected
                               ? "border-foreground bg-accent/40 ring-1 ring-foreground"
                               : "border-border hover:border-foreground/50 hover:bg-muted/30"
-                            }`}
+                          }`}
                         >
                           <div className="space-y-0.5">
                             <div className="text-xs font-semibold text-foreground md:text-sm">
@@ -589,7 +609,7 @@ export function AddSubscriptionForm({
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-bold text-foreground md:text-base">
-                              ₱{plan.cost.toLocaleString()}
+                              {formatCurrency(plan.cost)}
                             </div>
                             <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
                               / {plan.plan_type.toLowerCase()}
@@ -599,51 +619,57 @@ export function AddSubscriptionForm({
                       )
                     })}
                   </div>
-                ) : (
-                  /* Custom Plan Entry Form */
-                  <div className="space-y-4 pt-1">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-foreground md:text-sm">
-                        Subscription Cost (₱)
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                          ₱
-                        </span>
-                        <Input
-                          type="number"
-                          step="any"
-                          min="0"
-                          placeholder="0.00"
-                          className="pl-7 rounded-none text-sm"
-                          value={draftData.cost || ""}
-                          onChange={(e) => {
-                            const val = e.target.value
-                            updateDraft({ cost: val === "" ? 0 : Number(val) })
-                          }}
-                        />
-                      </div>
-                    </div>
+                ) : null}
 
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-foreground md:text-sm">
-                        Billing Cycle
-                      </Label>
-                      <Tabs
-                        value={draftData.plan_type || "Monthly"}
-                        onValueChange={(val) =>
-                          updateDraft({ plan_type: val as "Weekly" | "Monthly" | "Annual" })
-                        }
-                      >
-                        <TabsList variant="line" className="w-full rounded-none">
-                          <TabsTrigger value="Weekly" className="rounded-none">Weekly</TabsTrigger>
-                          <TabsTrigger value="Monthly" className="rounded-none">Monthly</TabsTrigger>
-                          <TabsTrigger value="Annual" className="rounded-none">Annual</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
+                {/* Custom Plan Entry Form */}
+                <div className="space-y-4 pt-1">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-foreground md:text-sm">
+                      Subscription Cost (₱)
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                        ₱
+                      </span>
+                      <Input
+                        type="number"
+                        step="any"
+                        min="0"
+                        placeholder="0.00"
+                        className="pl-7 rounded-none text-sm"
+                        value={draftData.cost || ""}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          updateDraft({
+                            cost: val === "" ? 0 : Number(val),
+                            selectedPlanId: undefined,
+                          })
+                        }}
+                      />
                     </div>
                   </div>
-                )}
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-foreground md:text-sm">
+                      Billing Cycle
+                    </Label>
+                    <Tabs
+                      value={draftData.plan_type || "Monthly"}
+                      onValueChange={(val) =>
+                        updateDraft({
+                          plan_type: val as "Weekly" | "Monthly" | "Annual",
+                          selectedPlanId: undefined,
+                        })
+                      }
+                    >
+                      <TabsList variant="line" className="w-full rounded-none">
+                        <TabsTrigger value="Weekly" className="rounded-none">Weekly</TabsTrigger>
+                        <TabsTrigger value="Monthly" className="rounded-none">Monthly</TabsTrigger>
+                        <TabsTrigger value="Annual" className="rounded-none">Annual</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -808,7 +834,7 @@ export function AddSubscriptionForm({
                       Next Due Date
                     </Label>
                     <DatePicker
-                      value={draftData.next_due_date}
+                      value={draftData.next_due_date ?? undefined}
                       onChange={(date) => {
                         updateDraft({
                           next_due_date: date,
@@ -885,7 +911,7 @@ export function AddSubscriptionForm({
                   <div>
                     <span className="text-muted-foreground">Cost:</span>
                     <div className="font-bold text-foreground">
-                      ₱{Number(draftData.cost || 0).toLocaleString()}
+                      {formatCurrency(Number(draftData.cost || 0))}
                     </div>
                   </div>
                   <div>
@@ -897,7 +923,7 @@ export function AddSubscriptionForm({
                   <div>
                     <span className="text-muted-foreground">Status:</span>
                     <div className="font-semibold text-foreground capitalize">
-                      {formatStatusLabel(computeSubscriptionStatus(draftData.next_due_date, draftData.isStartedToday))}
+                      {draftData.is_trial ? "Trial" : formatStatusLabel(computeSubscriptionStatus(draftData.next_due_date ?? undefined, draftData.isStartedToday))}
                     </div>
                   </div>
                   <div>

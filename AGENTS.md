@@ -19,6 +19,7 @@ Before starting any feature implementation, debugging, or test creation, you MUS
 - Utilize Shadcn UI as the foundation for all interface components using the Shadcn MCP
 - Take full initiative in the design phase. Generate complete, polished component stylings using Shadcn and Tailwind CSS so the developer can focus strictly on frontend and backend logic integration.
 - Implement Framer Motion for fluid layout animations, page transitions, and micro-interactions, ensuring animations respect user accessibility preferences (prefers-reduced-motion).
+- Always use `formatCurrency()` from `lib/utils.ts` to format currency values.
 
 ## Data Validation & Forms (Zod)
 - Implement React Hook Form integrated with Zod resolvers for all client-side data entry.

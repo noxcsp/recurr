@@ -1,6 +1,7 @@
 import type { Subscription } from "@/types/subscriptions"
 import type { PaymentRecord, DashboardAnalytics } from "@/types/analytics"
 import type { OverdueSubscriptionItem } from "@/components/overdue-subscriptions"
+import { formatCurrency } from "@/lib/utils"
 
 /**
  * Calculates the number of overdue subscriptions and returns formatted list items.
@@ -13,18 +14,12 @@ export function getOverdueSubscriptions(
   const today = new Date(referenceDate)
   today.setHours(0, 0, 0, 0)
 
-  const formatter = new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-
   const overdueList = subscriptions.filter((sub) => {
     if (sub.subscription_status === "overdue") return true
-    if (sub.subscription_status === "paid") return false
+    if (sub.subscription_status === "paid" || sub.subscription_status === "cancelled") return false
 
     // Treat next_due_date as local date (YYYY-MM-DD)
+    if (!sub.next_due_date) return false
     const [y, m, d] = sub.next_due_date.split("-").map(Number)
     if (!y || !m || !d) return false
     const dueDate = new Date(y, m - 1, d)
@@ -32,13 +27,15 @@ export function getOverdueSubscriptions(
   })
 
   const overdueItems: OverdueSubscriptionItem[] = overdueList.map((sub) => {
-    const [y, m, d] = sub.next_due_date.split("-").map(Number)
     let diffDays = 1
-    if (y && m && d) {
-      const dueDate = new Date(y, m - 1, d)
-      if (dueDate < today) {
-        const diffMs = today.getTime() - dueDate.getTime()
-        diffDays = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+    if (sub.next_due_date) {
+      const [y, m, d] = sub.next_due_date.split("-").map(Number)
+      if (y && m && d) {
+        const dueDate = new Date(y, m - 1, d)
+        if (dueDate < today) {
+          const diffMs = today.getTime() - dueDate.getTime()
+          diffDays = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+        }
       }
     }
 
@@ -47,7 +44,7 @@ export function getOverdueSubscriptions(
       name: sub.service_name,
       billingCycle: sub.plan_type,
       daysOverdue: diffDays === 1 ? "1 day" : `${diffDays} days`,
-      price: formatter.format(Number(sub.cost)),
+      price: formatCurrency(Number(sub.cost)),
       imageUrl: "",
     }
   })
@@ -69,12 +66,6 @@ export function calculateDashboardAnalytics(
 ): DashboardAnalytics {
   const currentYear = referenceDate.getFullYear()
   const currentMonth = referenceDate.getMonth()
-  const formatter = new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
   // Previous month calculations (handles January -> December transition)
   const prevMonthDate = new Date(referenceDate)
@@ -117,28 +108,29 @@ export function calculateDashboardAnalytics(
     } else if (diff > 0) {
       const pct = Math.round((diff / previousMonthSpend) * 100)
       spendTrend = "up"
-      trendPercentage = `${pct}% (+${formatter.format(diff)})`
+      trendPercentage = `${pct}% (+${formatCurrency(diff)})`
       trendLabel = "increased from last month"
     } else {
       const absDiff = Math.abs(diff)
       const pct = Math.round((absDiff / previousMonthSpend) * 100)
       spendTrend = "down"
-      trendPercentage = `${pct}% (-${formatter.format(absDiff)})`
+      trendPercentage = `${pct}% (-${formatCurrency(absDiff)})`
       trendLabel = "decreased from last month"
     }
   } else if (currentMonthSpend > 0) {
     // First-tracked baseline month: Use 'flat' so it displays in neutral text rather than alarmist red
     spendTrend = "flat"
-    trendPercentage = `+${formatter.format(currentMonthSpend)}`
+    trendPercentage = `+${formatCurrency(currentMonthSpend)}`
     trendLabel = "new spend this month"
   } else {
     spendTrend = "flat"
-    trendPercentage = formatter.format(0)
+    trendPercentage = formatCurrency(0)
     trendLabel = "no spend this month"
   }
 
-  // 4. Active Subscriptions Count
-  const activeSubscriptionsCount = subscriptions.length
+  // 4. Active Subscriptions Count (excluding cancelled)
+  const activeSubs = subscriptions.filter((s) => s.subscription_status !== "cancelled")
+  const activeSubscriptionsCount = activeSubs.length
 
   // 5. Due This Week Count (Next due date within today and today + 7 days)
   const today = new Date(referenceDate)
@@ -146,7 +138,8 @@ export function calculateDashboardAnalytics(
   const sevenDaysLater = new Date(today)
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7)
 
-  const dueThisWeekCount = subscriptions.filter((sub) => {
+  const dueThisWeekCount = activeSubs.filter((sub) => {
+    if (!sub.next_due_date) return false
     // Treat next_due_date as local date (YYYY-MM-DD)
     const [y, m, d] = sub.next_due_date.split("-").map(Number)
     if (!y || !m || !d) return false
@@ -156,10 +149,10 @@ export function calculateDashboardAnalytics(
 
   // 6. Top Subscription (highest normalized monthly cost)
   let topSubName = "N/A"
-  let topSubCostStr = formatter.format(0)
+  let topSubCostStr = formatCurrency(0)
   let topSubBillingCycle = "No active subscriptions"
 
-  if (subscriptions.length > 0) {
+  if (activeSubs.length > 0) {
     const getMonthlyEquivalent = (sub: Subscription) => {
       const cost = Number(sub.cost)
       if (sub.plan_type === "Weekly") return cost * (52 / 12)
@@ -167,13 +160,13 @@ export function calculateDashboardAnalytics(
       return cost // Monthly
     }
 
-    const sortedSubs = [...subscriptions].sort(
+    const sortedSubs = [...activeSubs].sort(
       (a, b) => getMonthlyEquivalent(b) - getMonthlyEquivalent(a)
     )
     const topSub = sortedSubs[0]
 
     topSubName = topSub.service_name
-    topSubCostStr = formatter.format(Number(topSub.cost))
+    topSubCostStr = formatCurrency(Number(topSub.cost))
 
     if (topSub.plan_type === "Monthly") {
       topSubBillingCycle = "Billed monthly"
@@ -187,8 +180,8 @@ export function calculateDashboardAnalytics(
   // 7. Overdue Subscriptions
   const overdueData = getOverdueSubscriptions(subscriptions, referenceDate)
 
-  const formattedMonthlySpend = formatter.format(currentMonthSpend)
-  const formattedYearlySpend = formatter.format(currentYearSpend)
+  const formattedMonthlySpend = formatCurrency(currentMonthSpend)
+  const formattedYearlySpend = formatCurrency(currentYearSpend)
 
   return {
     monthlySpend: formattedMonthlySpend,

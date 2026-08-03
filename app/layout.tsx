@@ -2,7 +2,7 @@ import { Geist_Mono, DM_Sans, Merriweather } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/toast"
 import { cn } from "@/lib/utils";
 import { Metadata, Viewport } from "next";
 

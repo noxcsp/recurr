@@ -16,7 +16,7 @@ import { AddSubscriptionForm } from "@/components/add-subscription-form"
 import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { AddSubscriptionButton } from "@/components/add-subscription-button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 
 const localizer = dateFnsLocalizer({
   format,
@@ -158,17 +158,24 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
 
   // Derive events
   const events = useMemo(() => {
-    return subscriptions.map((sub) => {
-      const dueDate = new Date(sub.next_due_date)
-      dueDate.setHours(0, 0, 0, 0)
-      return {
-        title: `${sub.service_name} — ₱${sub.cost.toLocaleString()}`,
-        start: dueDate,
-        end: dueDate,
-        allDay: true,
-        subscription: sub,
-      }
-    })
+    return subscriptions
+      .map((sub) => {
+        const targetDateStr =
+          sub.is_trial && sub.trial_end_date ? sub.trial_end_date : sub.next_due_date
+        if (!targetDateStr) return null
+        const dueDate = new Date(targetDateStr)
+        dueDate.setHours(0, 0, 0, 0)
+        return {
+          title: sub.is_trial
+            ? `${sub.service_name} (Trial Ends)`
+            : `${sub.service_name} — ${formatCurrency(sub.cost)}`,
+          start: dueDate,
+          end: dueDate,
+          allDay: true,
+          subscription: sub,
+        }
+      })
+      .filter(Boolean) as SubscriptionEvent[]
   }, [subscriptions])
 
   // Build dot map for indicators
@@ -368,7 +375,7 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
                         </span>
                       </div>
                       <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground md:text-base">
-                        ₱{sub.cost.toLocaleString()}
+                        {formatCurrency(sub.cost)}
                       </span>
                     </div>
                   </button>

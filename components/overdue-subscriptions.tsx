@@ -4,7 +4,7 @@ import * as React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import type { Subscription } from "@/types/subscriptions"
 import { getOverdueSubscriptions } from "@/lib/analytics"
 import { CheckCheck } from "lucide-react"
@@ -15,7 +15,7 @@ export interface OverdueSubscriptionItem {
   name: string
   billingCycle: string
   daysOverdue: string
-  price: string
+  price: string | number
   imageUrl: string
 }
 
@@ -156,7 +156,7 @@ export function OverdueSubscriptions({
               >
                 <SubscriptionLogo src={sub.imageUrl} alt={`${sub.name} logo`} name={sub.name} />
                 <div className="min-w-0 flex-1 space-y-1">
-                  <h4 className="truncate text-sm font-semibold leading-tight text-foreground md:text-base lg:text-base">
+                  <h4 className="truncate text-sm font-heading font-semibold leading-tight text-foreground md:text-base lg:text-base">
                     {sub.name}
                   </h4>
                   <p className="text-xs font-normal text-muted-foreground md:text-xs lg:text-sm">
@@ -169,8 +169,8 @@ export function OverdueSubscriptions({
                     <span className="text-xs font-normal text-destructive md:text-xs lg:text-sm">
                       {sub.daysOverdue}
                     </span>
-                    <span className="text-sm font-bold text-foreground md:text-base lg:text-base tabular-nums">
-                      {sub.price}
+                    <span className="text-sm font-medium text-foreground md:text-base lg:text-base tabular-nums">
+                      {typeof sub.price === "number" ? formatCurrency(sub.price) : sub.price}
                     </span>
                   </div>
                 </div>

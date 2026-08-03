@@ -11,9 +11,9 @@ import { Subscription } from "@/types/subscriptions"
 import { AddSubscriptionForm } from "@/components/add-subscription-form"
 import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { updateSubscription } from "@/app/home/actions"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import { toUtcDate } from "@/lib/utils/date"
 
 const DnDCalendar = withDragAndDrop<SubscriptionEvent>(
@@ -123,19 +123,25 @@ export function SubscriptionCalendar({
 
   const [, startTransition] = useTransition()
 
-  // Derive calendar events from subscriptions prop
   const baseEvents = useMemo(() => {
-    return subscriptions.map((sub) => {
-      const dueDate = new Date(sub.next_due_date)
-      dueDate.setHours(0, 0, 0, 0)
-      return {
-        title: `${sub.service_name} — ₱${sub.cost.toLocaleString()}`,
-        start: dueDate,
-        end: dueDate, // Always start = end to prevent date range spanning
-        allDay: true,
-        subscription: sub,
-      }
-    })
+    return subscriptions
+      .map((sub) => {
+        const targetDateStr =
+          sub.is_trial && sub.trial_end_date ? sub.trial_end_date : sub.next_due_date
+        if (!targetDateStr) return null
+        const dueDate = new Date(targetDateStr)
+        dueDate.setHours(0, 0, 0, 0)
+        return {
+          title: sub.is_trial
+            ? `${sub.service_name} (Trial Ends)`
+            : `${sub.service_name} — ${formatCurrency(sub.cost)}`,
+          start: dueDate,
+          end: dueDate, // Always start = end to prevent date range spanning
+          allDay: true,
+          subscription: sub,
+        }
+      })
+      .filter(Boolean) as SubscriptionEvent[]
   }, [subscriptions])
 
   // Manage optimistic updates during event dragging

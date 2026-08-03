@@ -9,7 +9,7 @@ import {
   animate,
 } from "motion/react"
 import { Check, X, CreditCard, CalendarDays, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { completeSwipeoff } from "@/app/home/swipeoff-actions"
@@ -41,6 +41,7 @@ const statusStyles: Record<Subscription["subscription_status"], string> = {
   paid: "border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400",
   unpaid: "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400",
   overdue: "border-destructive text-destructive",
+  cancelled: "border-muted-foreground text-muted-foreground",
 }
 
 // ── Swipe threshold ─────────────────────────────────────────────────────────
@@ -445,14 +446,16 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
   const statusStyle = statusStyles[sub.subscription_status]
 
   const formattedDate = useMemo(() => {
-    const d = new Date(sub.next_due_date)
+    const targetStr = sub.is_trial && sub.trial_end_date ? sub.trial_end_date : sub.next_due_date
+    if (!targetStr) return "N/A"
+    const d = new Date(targetStr)
     return d.toLocaleDateString(undefined, {
       weekday: "short",
       month: "short",
       day: "numeric",
       year: "numeric",
     })
-  }, [sub.next_due_date])
+  }, [sub.is_trial, sub.trial_end_date, sub.next_due_date])
 
   return (
     <div className="flex flex-col overflow-hidden border border-border bg-card ring-1 ring-foreground/10">
@@ -479,7 +482,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
             Cost
           </span>
           <span className="mt-1 text-2xl font-bold tabular-nums leading-tight text-foreground md:text-3xl lg:text-4xl">
-            ₱{sub.cost.toLocaleString()}
+            {formatCurrency(sub.cost)}
           </span>
         </div>
 
@@ -509,7 +512,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
 
           <div className="col-span-2 flex flex-col gap-1">
             <span className="text-xs font-semibold uppercase tracking-wide leading-none text-muted-foreground md:text-xs lg:text-sm">
-              Due Date
+              {sub.is_trial ? "Trial Ends" : "Due Date"}
             </span>
             <span className="flex items-center gap-1 text-sm font-normal leading-relaxed text-foreground md:text-base lg:text-base">
               <CalendarDays className="size-3.5 text-muted-foreground" />

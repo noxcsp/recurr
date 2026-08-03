@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { Bell, BellOff, AlertCircle, ShieldAlert, CalendarDays } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -215,8 +215,8 @@ export function NotificationSettings({ user, profile }: NotificationSettingsProp
             {isPermissionDenied
               ? "Push notifications are currently blocked by browser hardware permissions."
               : pushEnabled
-              ? "Active. Device is registered to receive FCM subscription alerts."
-              : "Disabled. Turn on to receive push alerts before renewals."}
+                ? "Active. Device is registered to receive subscription alerts."
+                : "Disabled. Turn on to receive push alerts before renewals."}
           </CardDescription>
         </CardHeader>
       </Card>
