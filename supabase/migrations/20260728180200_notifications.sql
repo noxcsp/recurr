@@ -55,10 +55,13 @@ SELECT cron.schedule(
     '0 0 * * *',
     $$
     SELECT net.http_post(
-        url := (SELECT current_setting('app.settings.supabase_url', true) || '/functions/v1/send-due-notifications'),
-        headers := '{"Content-Type":"application/json"}'::jsonb, 
-        body := '{}',
-        timeout_milliseconds := 1000
+        url := (SELECT value FROM private.secrets WHERE key = 'project_url') || '/functions/v1/send-due-notifications',
+        headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || (SELECT value FROM private.secrets WHERE key = 'secret_key')
+        ),
+        body := '{}'::jsonb,
+        timeout_milliseconds := 10000
     );
     $$
 );

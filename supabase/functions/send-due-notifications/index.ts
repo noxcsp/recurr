@@ -148,12 +148,50 @@ async function sendFcmNotification(
   return { success: true };
 }
 
+function timingSafeMatch(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  if (bufA.byteLength !== bufB.byteLength) {
+    return false;
+  }
+  return crypto.subtle.timingSafeEqual(bufA, bufB);
+}
+
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
   try {
+    // ------------------------------------------------------------------
+    // Authorization Check: Validate Bearer token with SUPABASE_SECRET_KEY
+    // ------------------------------------------------------------------
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    const secretKey = Deno.env.get("SUPABASE_SECRET_KEY");
+
+    let isAuthorized = false;
+
+    if (authHeader && secretKey) {
+      const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+      isAuthorized = timingSafeMatch(token, secretKey);
+    }
+
+    if (!secretKey) {
+      console.warn(
+        "[send-due-notifications] SUPABASE_SECRET_KEY not configured in environment."
+      );
+      isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
+      console.warn("[send-due-notifications] Unauthorized request attempt.");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid or missing Authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -467,4 +505,3 @@ Deno.serve(async () => {
     );
   }
 });
-
