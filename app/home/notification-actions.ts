@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import type { Notification } from "@/types/notifications"
 
@@ -9,6 +10,11 @@ export async function getNotifications(limit: number = 20): Promise<{
   unreadCount: number
   error?: string
 }> {
+  const limitParsed = z.number().int().positive().max(100).safeParse(limit)
+  if (!limitParsed.success) {
+    return { data: [], unreadCount: 0, error: "Invalid limit parameter." }
+  }
+  const validLimit = limitParsed.data
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
@@ -23,7 +29,7 @@ export async function getNotifications(limit: number = 20): Promise<{
       .select("id, user_id, title, body, is_read, subscription_id, created_at")
       .eq("user_id", userData.user.id)
       .order("created_at", { ascending: false })
-      .limit(limit),
+      .limit(validLimit),
     supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
@@ -45,6 +51,11 @@ export async function getNotifications(limit: number = 20): Promise<{
  * Marks a single notification as read.
  */
 export async function markNotificationAsRead(id: string) {
+  const idParsed = z.string().uuid().safeParse(id)
+  if (!idParsed.success) {
+    return { error: "Invalid notification ID." }
+  }
+
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
@@ -96,6 +107,11 @@ export async function markAllNotificationsAsRead() {
  * Deletes a notification by ID.
  */
 export async function deleteNotification(id: string) {
+  const idParsed = z.string().uuid().safeParse(id)
+  if (!idParsed.success) {
+    return { error: "Invalid notification ID." }
+  }
+
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()

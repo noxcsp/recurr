@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 
 /**
@@ -15,6 +16,11 @@ import { createClient } from "@/lib/supabase/server"
  * server component refetches fresh data on the next render.
  */
 export async function completeSwipeoff(paidSubscriptionIds: string[]) {
+  const idsParsed = z.array(z.string().uuid()).safeParse(paidSubscriptionIds)
+  if (!idsParsed.success) {
+    return { error: "Invalid subscription IDs." }
+  }
+
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
