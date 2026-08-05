@@ -77,6 +77,7 @@ export function useNotifications() {
             event: "*",
             schema: "public",
             table: "notifications",
+            filter: `user_id=eq.${user.id}`,
           },
           (payload: RealtimePostgresChangesPayload<Notification>) => {
             if (!isMounted) return
