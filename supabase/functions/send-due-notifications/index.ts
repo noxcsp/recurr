@@ -181,7 +181,7 @@ Deno.serve(async (req: Request) => {
       console.warn(
         "[send-due-notifications] SUPABASE_SECRET_KEY not configured in environment."
       );
-      isAuthorized = true;
+      isAuthorized = false;
     }
 
     if (!isAuthorized) {
