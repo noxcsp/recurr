@@ -28,12 +28,14 @@ export default async function HomePage() {
   const [{ data: profileData }, { data: subscriptionsData }, { data: paymentsData }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("*")
+      .select("id, last_swipeoff_date, display_name, notify_advance_days, notification_ttl_days")
       .eq("id", user.id)
       .single(),
     supabase
       .from("subscriptions")
-      .select("*")
+      .select(
+        "id, user_id, service_name, category, cost, plan_type, payment_mode, next_due_date, is_trial, trial_end_date, subscription_status, created_at"
+      )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
