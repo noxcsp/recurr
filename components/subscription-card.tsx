@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useRef, useTransition } from "react"
+import { useState, useTransition, useCallback } from "react"
+import { motion, useMotionValue, useTransform } from "motion/react"
 import { toast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -15,9 +16,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Subscription } from "@/types/subscriptions"
-import { RefreshCw, Trash2, RotateCcw, Check, X, Zap } from "lucide-react"
+import { RefreshCw, Trash2, RotateCcw, Check, X, Zap, Loader2 } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
-import { renewSubscription } from "@/app/home/actions"
+import {
+  renewSubscription,
+  deleteSubscription,
+  getSubscriptionPaymentCount,
+} from "@/app/home/actions"
 import { parseUtcToLocalDate } from "@/lib/utils/date"
 import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { useSubscriptionStore } from "@/lib/store/use-subscription-store"
@@ -160,7 +165,7 @@ function getStatusBadge(sub: Subscription): StatusBadgeInfo | null {
   }
 }
 
-const SWIPE_THRESHOLD = 40
+const SWIPE_THRESHOLD = 60
 
 export function SubscriptionCard({
   sub,
@@ -169,12 +174,12 @@ export function SubscriptionCard({
 }: SubscriptionCardProps) {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [paymentHistoryCount, setPaymentHistoryCount] = useState<number | null>(null)
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false)
   const [selectedStartMode, setSelectedStartMode] = useState<"trial_end" | "today">("trial_end")
   const [isRenewing, startRenewTransition] = useTransition()
-  const [swipeX, setSwipeX] = useState(0)
-  const touchStartX = useRef(0)
-  const touchStartY = useRef(0)
-  const isSwiping = useRef(false)
+  const [isDeleting, startDeleteTransition] = useTransition()
 
   const stageCancellation = useSubscriptionStore((s) => s.stageCancellation)
   const stageReactivation = useSubscriptionStore((s) => s.stageReactivation)
@@ -186,39 +191,63 @@ export function SubscriptionCard({
   const dueDays = getDaysRemaining(refDateStr)
   const statusBadge = getStatusBadge({ ...sub, subscription_status: effectiveStatus })
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!enableSwipe) return
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-    isSwiping.current = false
-  }
+  // Motion value for physics-driven gestures (Emil Kowalski principles)
+  const x = useMotionValue(0)
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!enableSwipe) return
-    const deltaX = touchStartX.current - e.touches[0].clientX
-    const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current)
+  // Dynamic interpolation for continuous gesture feedback
+  // Right drag (x > 0): Hard Delete action cue
+  const deleteBgOpacity = useTransform(x, [0, 60], [0, 1])
+  const deleteIconScale = useTransform(x, [0, 60, 100], [0.8, 1, 1.2])
 
-    if (!isSwiping.current && deltaY > Math.abs(deltaX)) {
-      return
-    }
+  // Left drag (x < 0): Stage Cancellation action cue
+  const cancelBgOpacity = useTransform(x, [-60, 0], [1, 0])
+  const cancelIconScale = useTransform(x, [-100, -60, 0], [1.2, 1, 0.8])
 
-    if (deltaX > 10) {
-      isSwiping.current = true
-    }
+  const handleOpenDeleteDialog = useCallback(async () => {
+    setDeleteDialogOpen(true)
+    setIsFetchingHistory(true)
+    const result = await getSubscriptionPaymentCount(sub.id)
+    setPaymentHistoryCount(result.count)
+    setIsFetchingHistory(false)
+  }, [sub.id])
 
-    if (isSwiping.current) {
-      const clampedX = Math.max(0, Math.min(deltaX, 120))
-      setSwipeX(clampedX)
-    }
-  }
+  const handleDragEnd = useCallback(
+    (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
+      if (!enableSwipe) return
+      const offsetX = info.offset.x
+      const velocityX = info.velocity.x
 
-  const handleTouchEnd = () => {
-    if (!enableSwipe) return
-    if (swipeX >= SWIPE_THRESHOLD) {
-      stageCancellation(sub)
-    }
-    setSwipeX(0)
-    isSwiping.current = false
+      // Swipe Left -> Stage Cancellation (soft cancel)
+      if (offsetX < -SWIPE_THRESHOLD || velocityX < -400) {
+        stageCancellation(sub)
+        return
+      }
+
+      // Swipe Right -> Hard Delete flow
+      if (offsetX > SWIPE_THRESHOLD || velocityX > 400) {
+        handleOpenDeleteDialog()
+        return
+      }
+    },
+    [enableSwipe, sub, stageCancellation, handleOpenDeleteDialog]
+  )
+
+  const handleConfirmDelete = () => {
+    startDeleteTransition(async () => {
+      const result = await deleteSubscription(sub.id)
+      if (result?.error) {
+        toast.error("Failed to delete subscription", {
+          position: "top-right",
+          description: result.error,
+        })
+      } else {
+        toast.success("Subscription deleted", {
+          position: "top-right",
+          description: `${sub.service_name} was permanently deleted.`,
+        })
+        setDeleteDialogOpen(false)
+      }
+    })
   }
 
   const handleRenewOrSubscribeAgain = (startDateMode: "today" | "trial_end" = "today") => {
@@ -260,45 +289,103 @@ export function SubscriptionCard({
 
   return (
     <>
-      <li className="relative overflow-hidden">
-        {/* Cancel zone revealed on swipe */}
+      <li className="relative overflow-hidden list-none">
+        {/* Revealed Action Zones on Swipe */}
         {enableSwipe && (
-          <div
-            className="absolute inset-y-0 right-0 flex items-center justify-center bg-destructive/10 px-4"
-            style={{ width: `${swipeX}px` }}
-            aria-hidden="true"
-          >
-            {swipeX >= SWIPE_THRESHOLD && (
-              <Trash2 className="size-4 text-destructive" />
-            )}
-          </div>
+          <>
+            {/* Right drag action zone: Hard Delete */}
+            <motion.div
+              className="absolute inset-y-0 left-0 flex items-center justify-start bg-destructive/10 px-4"
+              style={{ opacity: deleteBgOpacity }}
+              aria-hidden="true"
+            >
+              <motion.div
+                className="flex items-center gap-1.5 text-xs font-semibold text-destructive"
+                style={{ scale: deleteIconScale }}
+              >
+                <Trash2 className="size-4" />
+                <span>Delete</span>
+              </motion.div>
+            </motion.div>
+
+            {/* Left drag action zone: Stage Cancellation */}
+            <motion.div
+              className="absolute inset-y-0 right-0 flex items-center justify-end bg-warning/10 px-4"
+              style={{ opacity: cancelBgOpacity }}
+              aria-hidden="true"
+            >
+              <motion.div
+                className="flex items-center gap-1.5 text-xs font-semibold text-warning"
+                style={{ scale: cancelIconScale }}
+              >
+                <X className="size-4" />
+                <span>Cancel</span>
+              </motion.div>
+            </motion.div>
+          </>
         )}
 
-        {/* Swipeable / Tappable card */}
-        <div
-          className="relative border border-border bg-card transition-transform"
-          style={{
-            transform: enableSwipe && swipeX > 0 ? `translateX(-${swipeX}px)` : undefined,
-            transition: enableSwipe && swipeX === 0 ? "transform 200ms ease-out" : "none",
-          }}
-          onTouchStart={enableSwipe ? handleTouchStart : undefined}
-          onTouchMove={enableSwipe ? handleTouchMove : undefined}
-          onTouchEnd={enableSwipe ? handleTouchEnd : undefined}
+        {/* Swipeable / Interactive card container with spring physics */}
+        <motion.div
+          className="relative border border-border bg-card transition-colors touch-pan-y"
+          style={{ x }}
+          drag={enableSwipe ? "x" : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.6}
+          dragSnapToOrigin={true}
+          onDragEnd={handleDragEnd}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
         >
           {/* Card body - clicking opens Edit Form */}
           <div
             className="flex items-center justify-between px-3 py-2.5 text-left cursor-pointer hover:bg-muted/30 transition-colors"
             onClick={() => setEditDialogOpen(true)}
           >
-            <div className="space-y-0.5">
-              <div className="text-sm font-heading font-semibold text-foreground md:text-base lg:text-base">
-                {sub.service_name}
+            <div className="space-y-0.5 min-w-0 flex-1 pr-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="text-sm font-heading font-semibold text-foreground md:text-base lg:text-base truncate">
+                  {sub.service_name}
+                </div>
+                {/* Desktop Accessible Action Icons (Hidden on mobile) */}
+                <div className="hidden md:flex items-center gap-0.5 shrink-0">
+                  {!isCancelled && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="rounded-none text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors"
+                      title="Cancel subscription"
+                      aria-label={`Cancel ${sub.service_name} subscription`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        stageCancellation(sub)
+                      }}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Delete subscription"
+                    aria-label={`Delete ${sub.service_name} subscription`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenDeleteDialog()
+                    }}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
               </div>
               <div className="text-[11px] text-muted-foreground md:text-xs lg:text-xs">
                 {sub.category}
               </div>
             </div>
-            <div className="text-right">
+
+            <div className="text-right shrink-0">
               <div className="flex items-baseline justify-end gap-0.5 text-xs font-medium text-foreground md:text-sm lg:text-sm">
                 <span>{formatCurrency(sub.cost)}</span>
                 <span className="text-xs font-normal text-muted-foreground md:text-xs lg:text-xs">
@@ -411,7 +498,7 @@ export function SubscriptionCard({
               </>
             )}
           </div>
-        </div>
+        </motion.div>
       </li>
 
       {/* Edit Form Modal */}
@@ -420,6 +507,61 @@ export function SubscriptionCard({
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
       />
+
+      {/* Hard Delete AlertDialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-none sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="size-4 shrink-0" />
+              {isFetchingHistory
+                ? "Delete Subscription?"
+                : paymentHistoryCount === 0
+                ? "Delete Subscription?"
+                : "Delete Subscription & History?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-xs md:text-sm">
+              {isFetchingHistory ? (
+                <span className="flex items-center gap-2 py-2 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                  Checking payment history...
+                </span>
+              ) : paymentHistoryCount === 0 ? (
+                <>
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-foreground">
+                    {sub.service_name}
+                  </span>
+                  ? This subscription has no recorded payment history and is safe to delete permanently.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-foreground">
+                    {sub.service_name}
+                  </span>
+                  ? This subscription has{" "}
+                  <span className="font-semibold text-foreground">
+                    {paymentHistoryCount} recorded payment
+                    {paymentHistoryCount === 1 ? "" : "s"}
+                  </span>
+                  . Deleting it will permanently remove the subscription, and its past payment history will no longer be included in your analytics calculations.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting || isFetchingHistory}
+              className={cn(buttonVariants({ variant: "destructive" }), "rounded-none")}
+            >
+              {isDeleting ? "Deleting..." : "Delete Subscription"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Renew / Subscribe Again / Activate AlertDialog */}
       {showActions && (
