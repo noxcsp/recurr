@@ -108,8 +108,9 @@ In-app notification feed logs and read statuses.
 | `subscription_id` | `uuid` | Foreign Key (`public.subscriptions.id` ON DELETE SET NULL) | Optional link to subscription. |
 | `created_at` | `timestamptz` | Default: `now()` | Timestamp of alert. |
 
-#### Cron Job
+#### Cron Jobs & Cleanup
 *   `send-due-notifications` (`0 0 * * *`) dispatches daily push notifications for subscriptions due today.
+*   `delete-expired-notifications` (`0 1 * * *`) invokes `public.delete_expired_notifications()` to purge notifications older than each user's `notification_ttl_days` setting.
 
 ---
 
