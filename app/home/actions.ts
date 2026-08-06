@@ -210,14 +210,20 @@ export async function renewSubscription(
     }
 
     // Insert payment record into subscription_payments ledger
-    await supabase.from("subscription_payments").insert({
-      user_id: userData.user.id,
-      subscription_id: id,
-      service_name: sub.service_name,
-      amount: sub.cost,
-      plan_type: sub.plan_type,
-      payment_date: baseDate.toISOString(),
-    })
+    const { error: paymentError } = await supabase
+      .from("subscription_payments")
+      .insert({
+        user_id: userData.user.id,
+        subscription_id: id,
+        service_name: sub.service_name,
+        amount: sub.cost,
+        plan_type: sub.plan_type,
+        payment_date: baseDate.toISOString(),
+      })
+
+    if (paymentError) {
+      return { error: paymentError.message }
+    }
 
     const yyyy = nextDueDate.getFullYear()
     const mm = String(nextDueDate.getMonth() + 1).padStart(2, "0")
