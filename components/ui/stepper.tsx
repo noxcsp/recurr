@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Check } from "lucide-react"
+import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 
 export interface StepItem {
@@ -39,8 +40,9 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                 />
               )}
 
-              <button
+              <motion.button
                 type="button"
+                whileTap={isClickable ? { scale: 0.92 } : undefined}
                 disabled={!isClickable}
                 onClick={() => isClickable && onStepClick(step.id)}
                 className={cn(
@@ -57,7 +59,7 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                 ) : (
                   <span>{step.id}</span>
                 )}
-              </button>
+              </motion.button>
 
               <div className="mt-1.5 text-center flex flex-col items-center">
                 <span

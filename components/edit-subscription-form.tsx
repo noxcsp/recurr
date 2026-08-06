@@ -3,8 +3,8 @@
 import { useState, useEffect, useTransition, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { motion, AnimatePresence } from "motion/react"
 import { toast } from "@/hooks/use-toast"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -324,9 +324,9 @@ export function EditSubscriptionForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="w-[calc(100%-2rem)] sm:w-full sm:max-w-lg bg-transparent p-0 shadow-none ring-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
+        className="w-[calc(100%-1.5rem)] sm:w-full sm:max-w-lg bg-transparent p-0 shadow-none ring-0 max-h-[min(82dvh,calc(100dvh-env(safe-area-inset-top,1.5rem)-env(safe-area-inset-bottom,3.5rem)-1rem))] sm:max-h-[85vh] flex flex-col overflow-hidden my-auto"
       >
-        <Card className="w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden border-border bg-background rounded-none">
+        <Card className="w-full max-h-[min(82dvh,calc(100dvh-env(safe-area-inset-top,1.5rem)-env(safe-area-inset-bottom,3.5rem)-1rem))] sm:max-h-[85vh] flex flex-col overflow-hidden border-border bg-background rounded-none shadow-none">
           {/* Header */}
           <CardHeader className="relative space-y-2 shrink-0 pb-3 border-b border-border">
             <div className="flex items-center justify-between">
@@ -361,12 +361,31 @@ export function EditSubscriptionForm({
           </CardHeader>
 
           {/* Wizard Content Body */}
-          <CardContent className="space-y-4 overflow-y-auto min-h-0 flex-1 px-4 sm:px-6 py-4">
-            {error && (
-              <div className="border border-destructive p-3 text-xs font-medium leading-normal text-destructive rounded-none">
-                {error}
-              </div>
-            )}
+          <CardContent className="space-y-4 overflow-y-auto min-h-0 flex-1 px-4 sm:px-6 py-0">
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  key="error-banner"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15 }}
+                  className="border border-destructive p-3 text-xs font-medium leading-normal text-destructive rounded-none"
+                >
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="space-y-4"
+              >
 
             {/* STEP 1: SELECT SERVICE */}
             {currentStep === 1 && (
@@ -392,13 +411,14 @@ export function EditSubscriptionForm({
                     />
                   </div>
 
-                  <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar touch-pan-x">
                     {CATEGORY_OPTIONS.map((cat) => {
                       const active = selectedCategoryFilter === cat
                       return (
-                        <button
+                        <motion.button
                           key={cat}
                           type="button"
+                          whileTap={{ scale: 0.96 }}
                           onClick={() => setSelectedCategoryFilter(cat)}
                           className={`shrink-0 px-2.5 py-1 text-[11px] font-medium border rounded-none transition-colors ${
                             active
@@ -407,7 +427,7 @@ export function EditSubscriptionForm({
                           }`}
                         >
                           {cat}
-                        </button>
+                        </motion.button>
                       )
                     })}
                   </div>
@@ -451,8 +471,9 @@ export function EditSubscriptionForm({
                 )}
 
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       updateDraft({
                         selectedServiceId: "custom",
@@ -483,14 +504,15 @@ export function EditSubscriptionForm({
                         Custom entry
                       </div>
                     </div>
-                  </button>
+                  </motion.button>
 
                   {filteredTemplates.map((template) => {
                     const isSelected = draftData.selectedServiceId === template.id
                     return (
-                      <button
+                      <motion.button
                         key={template.id}
                         type="button"
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           const firstPlan = template.plans[0]
                           updateDraft({
@@ -524,7 +546,7 @@ export function EditSubscriptionForm({
                             {template.category} • {template.plans.length} plans
                           </div>
                         </div>
-                      </button>
+                      </motion.button>
                     )
                   })}
                 </div>
@@ -548,9 +570,10 @@ export function EditSubscriptionForm({
                     {selectedTemplate.plans.map((plan: ServicePlan) => {
                       const isSelected = draftData.selectedPlanId === plan.id
                       return (
-                        <button
+                        <motion.button
                           key={plan.id}
                           type="button"
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => {
                             updateDraft({
                               selectedPlanId: plan.id,
@@ -582,7 +605,7 @@ export function EditSubscriptionForm({
                               / {plan.plan_type.toLowerCase()}
                             </div>
                           </div>
-                        </button>
+                        </motion.button>
                       )
                     })}
                   </div>
@@ -655,9 +678,10 @@ export function EditSubscriptionForm({
                   {PREDEFINED_PAYMENT_METHODS.map((pm) => {
                     const isSelected = draftData.payment_mode === pm.label
                     return (
-                      <button
+                      <motion.button
                         key={pm.id}
                         type="button"
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => updateDraft({ payment_mode: pm.label })}
                         className={`flex flex-col items-start justify-between p-3 border transition-all text-left rounded-none ${
                           isSelected
@@ -685,7 +709,7 @@ export function EditSubscriptionForm({
                             </div>
                           )}
                         </div>
-                      </button>
+                      </motion.button>
                     )
                   })}
                 </div>
@@ -720,9 +744,10 @@ export function EditSubscriptionForm({
                   {PREDEFINED_TRIAL_DURATIONS.map((trial) => {
                     const isSelected = (draftData.selectedTrialDurationId || "none") === trial.id
                     return (
-                      <button
+                      <motion.button
                         key={trial.id}
                         type="button"
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           const isTrial = trial.days > 0
                           const endDate = isTrial
@@ -752,7 +777,7 @@ export function EditSubscriptionForm({
                             {trial.description}
                           </div>
                         </div>
-                      </button>
+                      </motion.button>
                     )
                   })}
                 </div>
@@ -935,40 +960,46 @@ export function EditSubscriptionForm({
                 </div>
               </div>
             )}
+              </motion.div>
+            </AnimatePresence>
           </CardContent>
 
           {/* Footer Controls */}
           <CardFooter className="shrink-0 flex items-center justify-between border-t border-border p-4 bg-muted/10 gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={currentStep === 1 || isPending}
-              onClick={handlePrev}
-              className="rounded-none text-xs"
-            >
-              <ChevronLeft className="size-3.5 mr-1" />
-              Back
-            </Button>
+            <motion.div whileTap={currentStep === 1 || isPending ? undefined : { scale: 0.96 }}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={currentStep === 1 || isPending}
+                onClick={handlePrev}
+                className="rounded-none text-xs"
+              >
+                <ChevronLeft className="size-3.5 mr-1" />
+                Back
+              </Button>
+            </motion.div>
 
-            <Button
-              type="button"
-              size="sm"
-              disabled={isPending}
-              onClick={handleNext}
-              className="rounded-none text-xs font-medium ml-auto"
-            >
-              {currentStep < totalSteps ? (
-                <>
-                  Next
-                  <ChevronRight className="size-3.5 ml-1" />
-                </>
-              ) : isPending ? (
-                "Saving..."
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
+            <motion.div whileTap={isPending ? undefined : { scale: 0.96 }} className="ml-auto">
+              <Button
+                type="button"
+                size="sm"
+                disabled={isPending}
+                onClick={handleNext}
+                className="rounded-none text-xs font-medium"
+              >
+                {currentStep < totalSteps ? (
+                  <>
+                    Next
+                    <ChevronRight className="size-3.5 ml-1" />
+                  </>
+                ) : isPending ? (
+                  "Saving..."
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </motion.div>
           </CardFooter>
         </Card>
       </DialogContent>
