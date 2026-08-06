@@ -3,6 +3,7 @@ import { Geist_Mono, DM_Sans, Merriweather } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toast"
+import { OfflineDetector } from "@/components/offline-detector"
 import { cn } from "@/lib/utils";
 import { Metadata, Viewport } from "next";
 
@@ -52,7 +53,10 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", dmSans.variable, merriweatherHeading.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <OfflineDetector />
+          {children}
+        </ThemeProvider>
         <Toaster />
       </body>
     </html>

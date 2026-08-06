@@ -11,7 +11,7 @@ import { SubscriptionsTab } from "@/components/mobile-tabs/subscriptions-tab"
 import { SettingsTab } from "@/components/mobile-tabs/settings-tab"
 
 // Nav height in px — shared with AddFAB so the button clears the bar exactly
-export const NAV_HEIGHT_PX = 72
+export const NAV_HEIGHT_PX = 56
 
 type Tab = "dashboard" | "calendar" | "subscriptions" | "settings"
 
@@ -19,7 +19,7 @@ export function BottomNav() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard")
 
   return (
-    <div className="flex h-dvh flex-col lg:hidden">
+    <div className="flex h-mobile-screen flex-col lg:hidden">
       {/* Mobile top app bar */}
       <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]">
         <span className="font-heading text-lg font-bold tracking-tight text-foreground">

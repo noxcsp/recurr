@@ -9,7 +9,7 @@ interface AddFABProps {
   bottomOffset?: number
 }
 
-export function AddFAB({ bottomOffset = 72 }: AddFABProps) {
+export function AddFAB({ bottomOffset = 56 }: AddFABProps) {
   const [open, setOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
 

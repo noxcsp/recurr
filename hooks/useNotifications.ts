@@ -77,6 +77,7 @@ export function useNotifications() {
             event: "*",
             schema: "public",
             table: "notifications",
+            filter: `user_id=eq.${user.id}`,
           },
           (payload: RealtimePostgresChangesPayload<Notification>) => {
             if (!isMounted) return
@@ -158,39 +159,69 @@ export function useNotifications() {
     }
   }, [refetch])
 
-  const markAsRead = useCallback(async (id: string) => {
-    setActionInProgress(id)
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    )
-    setUnreadCount((c) => Math.max(0, c - 1))
-    await markNotificationAsRead(id)
-    setActionInProgress(null)
-  }, [])
+  const markAsRead = useCallback(
+    async (id: string) => {
+      setActionInProgress(id)
+      // Optimistic update
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      )
+      setUnreadCount((c) => Math.max(0, c - 1))
+      try {
+        const res = await markNotificationAsRead(id)
+        if (res?.error) {
+          await refetch(true)
+        }
+      } catch {
+        await refetch(true)
+      } finally {
+        setActionInProgress(null)
+      }
+    },
+    [refetch]
+  )
 
   const markAllAsRead = useCallback(async () => {
     setActionInProgress("all")
     // Optimistic update
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
     setUnreadCount(0)
-    await markAllNotificationsAsRead()
-    setActionInProgress(null)
-  }, [])
-
-  const deleteNotif = useCallback(async (id: string) => {
-    setActionInProgress(id)
-    // Optimistic update
-    setNotifications((prev) => {
-      const target = prev.find((n) => n.id === id)
-      if (target && !target.is_read) {
-        setUnreadCount((c) => Math.max(0, c - 1))
+    try {
+      const res = await markAllNotificationsAsRead()
+      if (res?.error) {
+        await refetch(true)
       }
-      return prev.filter((n) => n.id !== id)
-    })
-    await deleteNotification(id)
-    setActionInProgress(null)
-  }, [])
+    } catch {
+      await refetch(true)
+    } finally {
+      setActionInProgress(null)
+    }
+  }, [refetch])
+
+  const deleteNotif = useCallback(
+    async (id: string) => {
+      setActionInProgress(id)
+      // Optimistic update
+      setNotifications((prev) => {
+        const target = prev.find((n) => n.id === id)
+        if (target && !target.is_read) {
+          setUnreadCount((c) => Math.max(0, c - 1))
+        }
+        return prev.filter((n) => n.id !== id)
+      })
+      try {
+        const res = await deleteNotification(id)
+        if (res?.error) {
+          await refetch(true)
+        }
+      } catch {
+        await refetch(true)
+      } finally {
+        setActionInProgress(null)
+      }
+    },
+    [refetch]
+  )
 
   return {
     notifications,

@@ -19,17 +19,18 @@ ALTER TABLE public.subscription_payments ENABLE ROW LEVEL SECURITY;
 -- 3. RLS Policies
 DROP POLICY IF EXISTS "Users can view own payments" ON public.subscription_payments;
 CREATE POLICY "Users can view own payments" ON public.subscription_payments
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own payments" ON public.subscription_payments;
 CREATE POLICY "Users can insert own payments" ON public.subscription_payments
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((SELECT auth.uid()) = user_id);
 
 -- 4. Payment processing trigger function
 CREATE OR REPLACE FUNCTION public.process_subscription_payment()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = ''
 AS $function$
 DECLARE
     calculated_due_date TIMESTAMPTZ;

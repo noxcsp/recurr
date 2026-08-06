@@ -25,19 +25,19 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 -- 4. RLS Policies
 DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
 CREATE POLICY "Users can view their own notifications" ON public.notifications
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can insert their own notifications" ON public.notifications;
 CREATE POLICY "Users can insert their own notifications" ON public.notifications
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
 CREATE POLICY "Users can update their own notifications" ON public.notifications
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE USING ((SELECT auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can delete their own notifications" ON public.notifications;
 CREATE POLICY "Users can delete their own notifications" ON public.notifications
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING ((SELECT auth.uid()) = user_id);
 
 -- 5. Extensions & Cron Job for Push Notifications
 CREATE EXTENSION IF NOT EXISTS pg_cron;
@@ -55,10 +55,13 @@ SELECT cron.schedule(
     '0 0 * * *',
     $$
     SELECT net.http_post(
-        url := (SELECT current_setting('app.settings.supabase_url', true) || '/functions/v1/send-due-notifications'),
-        headers := '{"Content-Type":"application/json"}'::jsonb, 
-        body := '{}',
-        timeout_milliseconds := 1000
+        url := (SELECT value FROM private.secrets WHERE key = 'project_url') || '/functions/v1/send-due-notifications',
+        headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || (SELECT value FROM private.secrets WHERE key = 'secret_key')
+        ),
+        body := '{}'::jsonb,
+        timeout_milliseconds := 10000
     );
     $$
 );

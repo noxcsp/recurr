@@ -13,8 +13,8 @@ import {
 import ShadcnBigCalendar from "@/components/shadcn-big-calendar/shadcn-big-calendar"
 import { Subscription } from "@/types/subscriptions"
 import { AddSubscriptionForm } from "@/components/add-subscription-form"
-import { EditSubscriptionForm } from "@/components/edit-subscription-form"
 import { AddSubscriptionButton } from "@/components/add-subscription-button"
+import { SubscriptionCard } from "@/components/subscription-card"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
 
@@ -148,10 +148,6 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
   const [date, setDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
-  // Edit form state
-  const [editSubscription, setEditSubscription] = useState<Subscription | null>(null)
-  const [editOpen, setEditOpen] = useState(false)
-
   // Add form state
   const [addOpen, setAddOpen] = useState(false)
   const [addDefaultDate, setAddDefaultDate] = useState<Date | undefined>(undefined)
@@ -205,12 +201,6 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
     setSelectedDate(d)
   }, [])
 
-  // Event list item click → open edit form
-  const handleEventClick = useCallback((sub: Subscription) => {
-    setEditSubscription(sub)
-    setEditOpen(true)
-  }, [])
-
   // Add button for empty state
   const handleAddOnDate = useCallback(() => {
     const nextStart = new Date(selectedDate)
@@ -218,12 +208,6 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
     setAddDefaultDate(nextStart)
     setAddOpen(true)
   }, [selectedDate])
-
-  // Form close handlers
-  const handleEditOpenChange = useCallback((open: boolean) => {
-    setEditOpen(open)
-    if (!open) setEditSubscription(null)
-  }, [])
 
   const handleAddOpenChange = useCallback((open: boolean) => {
     setAddOpen(open)
@@ -347,41 +331,15 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
             </span>
           </button>
         ) : (
-          <ul className="divide-y divide-border">
-            {selectedDayEvents.map((ev) => {
-              const sub = ev.subscription
-              const accent = planTypeAccent[sub.plan_type]
-              return (
-                <li key={sub.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleEventClick(sub)}
-                    className="flex w-full items-stretch text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    {/* Color accent bar */}
-                    <div
-                      className={cn("w-1 shrink-0", accent)}
-                      aria-hidden="true"
-                    />
-
-                    {/* Event details */}
-                    <div className="flex flex-1 items-center justify-between gap-3 px-4 py-3">
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium leading-relaxed text-foreground md:text-base">
-                          {sub.service_name}
-                        </span>
-                        <span className="text-xs font-normal leading-normal text-muted-foreground">
-                          {sub.plan_type} · {sub.payment_mode}
-                        </span>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground md:text-base">
-                        {formatCurrency(sub.cost)}
-                      </span>
-                    </div>
-                  </button>
-                </li>
-              )
-            })}
+          <ul className="flex flex-col gap-3 p-4">
+            {selectedDayEvents.map((ev) => (
+              <SubscriptionCard
+                key={ev.subscription.id}
+                sub={ev.subscription}
+                enableSwipe={false}
+                showActions={false}
+              />
+            ))}
           </ul>
         )}
       </div>
@@ -392,15 +350,6 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
         externalOpen={addOpen}
         onExternalOpenChange={handleAddOpenChange}
       />
-
-      {/* Edit form */}
-      {editSubscription && (
-        <EditSubscriptionForm
-          subscription={editSubscription}
-          open={editOpen}
-          onOpenChange={handleEditOpenChange}
-        />
-      )}
     </div>
   )
 }

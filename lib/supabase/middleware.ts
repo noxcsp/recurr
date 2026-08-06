@@ -3,6 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Always allow offline page and test routes without auth redirect
+  if (pathname === '/offline') {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -12,7 +19,6 @@ export async function updateSession(request: NextRequest) {
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-
     {
       cookies: {
         getAll() {
@@ -31,27 +37,53 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Use getUser() to validate authentication state and refresh session.
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+  let user = null
+  let authError: Error | null = null
+
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    user = data.user
+    authError = error
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      authError = err
+    }
+  }
+
+  // Check if auth failed due to network / offline condition
+  const isNetworkError =
+    authError &&
+    (authError.name === 'AuthRetryableFetchError' ||
+      authError.message?.toLowerCase().includes('fetch') ||
+      authError.message?.toLowerCase().includes('network') ||
+      authError.message?.toLowerCase().includes('unexpected') ||
+      authError.message?.toLowerCase().includes('failed to fetch'))
+
+  if (isNetworkError) {
+    // When network is down, redirect to /offline instead of login page
+    const url = request.nextUrl.clone()
+    url.pathname = '/offline'
+    return NextResponse.redirect(url)
+  }
 
   const isAuthPage =
-    request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname === '/signup' ||
-    request.nextUrl.pathname === '/forgot-password' ||
-    request.nextUrl.pathname === '/success' ||
-    request.nextUrl.pathname.startsWith('/auth')
+    pathname === '/' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password' ||
+    pathname === '/success' ||
+    pathname.startsWith('/auth')
 
-  if ((error || !user) && !isAuthPage) {
+  if ((authError || !user) && !isAuthPage) {
     // no valid user, redirect to auth login page
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
-  if (user && (request.nextUrl.pathname === '/' || request.nextUrl.pathname === '/signup' || request.nextUrl.pathname === '/forgot-password')) {
+  if (
+    user &&
+    (pathname === '/' || pathname === '/signup' || pathname === '/forgot-password')
+  ) {
     // User already authenticated, redirect to /home
     const url = request.nextUrl.clone()
     url.pathname = '/home'

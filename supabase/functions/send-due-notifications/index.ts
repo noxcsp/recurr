@@ -90,6 +90,20 @@ interface NotificationResult {
   isUnregistered?: boolean;
 }
 
+interface DueNotificationCandidate {
+  id: string;
+  user_id: string;
+  service_name: string;
+  cost: number | string;
+  plan_type: string;
+  next_due_date: string | null;
+  is_trial: boolean;
+  trial_end_date: string | null;
+  subscription_status: string;
+  fcm_token: string | null;
+  notify_advance_days: number;
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -152,8 +166,37 @@ async function sendFcmNotification(
 // Main handler
 // ---------------------------------------------------------------------------
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
   try {
+    // ------------------------------------------------------------------
+    // Authorization Check: Validate Bearer token with SUPABASE_SECRET_KEY
+    // ------------------------------------------------------------------
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    const SUPABASE_SECRET_KEYS = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS"));
+    const secretKey = SUPABASE_SECRET_KEYS['default'];
+    
+    let isAuthorized = false;
+
+    if (authHeader && secretKey) {
+      const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+      isAuthorized = token === secretKey;
+    }
+
+    if (!secretKey) {
+      console.warn(
+        "[send-due-notifications] SUPABASE_SECRET_KEY not configured in environment."
+      );
+      isAuthorized = false;
+    }
+
+    if (!isAuthorized) {
+      console.warn("[send-due-notifications] Unauthorized request attempt.");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid or missing Authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -164,75 +207,18 @@ Deno.serve(async () => {
     const todayStr = now.toISOString().split("T")[0];
 
     // ------------------------------------------------------------------
-    // 1. Fetch user profiles to map FCM tokens & notify_advance_days
+    // 1. Fetch candidate subscriptions & profiles via DB-side JOIN RPC query
     // ------------------------------------------------------------------
-    const { data: profiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, fcm_token, notify_advance_days");
-
-    if (profileError) {
-      throw new Error(`Profile query error: ${profileError.message}`);
-    }
-
-    const profileMap = new Map<
-      string,
-      { fcm_token: string | null; notify_advance_days: number }
-    >();
-
-    const advanceDaysSet = new Set<number>();
-
-    for (const p of profiles ?? []) {
-      const days = typeof p.notify_advance_days === "number" ? p.notify_advance_days : 3;
-      profileMap.set(p.id, {
-        fcm_token: p.fcm_token ?? null,
-        notify_advance_days: days,
-      });
-      advanceDaysSet.add(days);
-    }
-
-    if (advanceDaysSet.size === 0) {
-      advanceDaysSet.add(3);
-    }
-
-    // Derive target date strings for each distinct notify_advance_days value
-    const targetDates = Array.from(advanceDaysSet).map((days) =>
-      addDaysToDateStr(todayStr, days)
+    const { data: rawCandidates, error: rpcError } = await supabase.rpc(
+      "get_due_notification_candidates",
+      { target_date: todayStr }
     );
 
-    // ------------------------------------------------------------------
-    // 2. Fetch candidate subscriptions (due, trial ending, overdue)
-    // ------------------------------------------------------------------
-    const { data: upcomingDue, error: err1 } = await supabase
-      .from("subscriptions")
-      .select("id, user_id, service_name, cost, plan_type, next_due_date, is_trial, trial_end_date, subscription_status")
-      .in("next_due_date", targetDates);
-
-    if (err1) throw new Error(`Query error (upcoming due): ${err1.message}`);
-
-    const { data: trialEnding, error: err2 } = await supabase
-      .from("subscriptions")
-      .select("id, user_id, service_name, cost, plan_type, next_due_date, is_trial, trial_end_date, subscription_status")
-      .eq("is_trial", true)
-      .in("trial_end_date", targetDates);
-
-    if (err2) throw new Error(`Query error (trial ending): ${err2.message}`);
-
-    const { data: overdueRows, error: err3 } = await supabase
-      .from("subscriptions")
-      .select("id, user_id, service_name, cost, plan_type, next_due_date, is_trial, trial_end_date, subscription_status")
-      .eq("subscription_status", "overdue")
-      .lt("next_due_date", todayStr);
-
-    if (err3) throw new Error(`Query error (overdue): ${err3.message}`);
-
-    // Deduplicate candidate subscriptions by ID
-    type SubRow = NonNullable<typeof upcomingDue>[number];
-    const candidateMap = new Map<string, SubRow>();
-    for (const row of [...(upcomingDue ?? []), ...(trialEnding ?? []), ...(overdueRows ?? [])]) {
-      candidateMap.set(row.id, row);
+    if (rpcError) {
+      throw new Error(`RPC query error (get_due_notification_candidates): ${rpcError.message}`);
     }
 
-    const candidateRows = Array.from(candidateMap.values());
+    const candidateRows = (rawCandidates ?? []) as DueNotificationCandidate[];
     if (candidateRows.length === 0) {
       return new Response(
         JSON.stringify({ message: "No subscriptions due, trial ending, or overdue to notify.", results: [] }),
@@ -241,7 +227,7 @@ Deno.serve(async () => {
     }
 
     // ------------------------------------------------------------------
-    // 3. Idempotency Check: Fetch notifications inserted today
+    // 2. Idempotency Check: Fetch notifications inserted today
     // ------------------------------------------------------------------
     const { data: existingTodayNotifs } = await supabase
       .from("notifications")
@@ -291,15 +277,13 @@ Deno.serve(async () => {
     const fcmTasks: FcmTask[] = [];
 
     // ------------------------------------------------------------------
-    // 4. Generate notification titles & bodies matching user advance settings
+    // 3. Generate notification titles & bodies matching user advance settings
     // ------------------------------------------------------------------
     for (const sub of pendingCandidates) {
-      const userProfile = profileMap.get(sub.user_id);
-      if (!userProfile) continue;
-
-      const userAdvanceDays = userProfile.notify_advance_days;
+      const userAdvanceDays = typeof sub.notify_advance_days === "number" ? sub.notify_advance_days : 3;
       const userTargetDate = addDaysToDateStr(todayStr, userAdvanceDays);
-      const formattedCost = formatCurrency(sub.cost ?? 0);
+      const numericCost = typeof sub.cost === "number" ? sub.cost : Number(sub.cost ?? 0);
+      const formattedCost = formatCurrency(numericCost);
 
       let title = "";
       let body = "";
@@ -333,7 +317,11 @@ Deno.serve(async () => {
         body = `${sub.plan_type} renewal of ${formattedCost}. Review to keep or cancel.`;
       }
       // Condition C: Overdue
-      else if (sub.subscription_status === "overdue" && sub.next_due_date < todayStr) {
+      else if (
+        (sub.subscription_status === "overdue" || sub.subscription_status === "unpaid") &&
+        sub.next_due_date &&
+        sub.next_due_date < todayStr
+      ) {
         notifType = "overdue";
         daysOverdue = getDaysDifference(sub.next_due_date, todayStr);
         const dayLabel = daysOverdue === 1 ? "day" : "days";
@@ -352,7 +340,7 @@ Deno.serve(async () => {
         is_read: false,
       });
 
-      if (userProfile.fcm_token) {
+      if (sub.fcm_token) {
         fcmTasks.push({
           subscription_id: sub.id,
           user_id: sub.user_id,
@@ -362,7 +350,7 @@ Deno.serve(async () => {
           advance_days: userAdvanceDays,
           title,
           body,
-          fcmToken: userProfile.fcm_token,
+          fcmToken: sub.fcm_token,
         });
       }
     }
@@ -467,4 +455,3 @@ Deno.serve(async () => {
     );
   }
 });
-

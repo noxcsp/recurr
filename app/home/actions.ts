@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { subscriptionSchema, type SubscriptionFormValues } from "@/lib/validations/subscription"
 
@@ -49,6 +50,11 @@ export async function updateSubscription(
   id: string,
   data: SubscriptionFormValues
 ) {
+  const idParsed = z.string().uuid().safeParse(id)
+  if (!idParsed.success) {
+    return { error: "Invalid subscription ID." }
+  }
+
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
@@ -94,6 +100,11 @@ export async function updateSubscription(
 }
 
 export async function cancelSubscription(id: string) {
+  const idParsed = z.string().uuid().safeParse(id)
+  if (!idParsed.success) {
+    return { error: "Invalid subscription ID." }
+  }
+
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
@@ -119,6 +130,11 @@ export async function cancelSubscription(id: string) {
 }
 
 export async function deleteSubscription(id: string) {
+  const idParsed = z.string().uuid().safeParse(id)
+  if (!idParsed.success) {
+    return { error: "Invalid subscription ID." }
+  }
+
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
@@ -145,6 +161,16 @@ export async function renewSubscription(
   id: string,
   startDateMode: "today" | "trial_end" = "today"
 ) {
+  const idParsed = z.string().uuid().safeParse(id)
+  if (!idParsed.success) {
+    return { error: "Invalid subscription ID." }
+  }
+
+  const modeParsed = z.enum(["today", "trial_end"]).safeParse(startDateMode)
+  if (!modeParsed.success) {
+    return { error: "Invalid start date mode." }
+  }
+
   const supabase = await createClient()
 
   const { data: userData, error: authError } = await supabase.auth.getUser()
@@ -184,14 +210,20 @@ export async function renewSubscription(
     }
 
     // Insert payment record into subscription_payments ledger
-    await supabase.from("subscription_payments").insert({
-      user_id: userData.user.id,
-      subscription_id: id,
-      service_name: sub.service_name,
-      amount: sub.cost,
-      plan_type: sub.plan_type,
-      payment_date: baseDate.toISOString(),
-    })
+    const { error: paymentError } = await supabase
+      .from("subscription_payments")
+      .insert({
+        user_id: userData.user.id,
+        subscription_id: id,
+        service_name: sub.service_name,
+        amount: sub.cost,
+        plan_type: sub.plan_type,
+        payment_date: baseDate.toISOString(),
+      })
+
+    if (paymentError) {
+      return { error: paymentError.message }
+    }
 
     const yyyy = nextDueDate.getFullYear()
     const mm = String(nextDueDate.getMonth() + 1).padStart(2, "0")

@@ -1,11 +1,11 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { getToken, deleteToken, onMessage } from "firebase/messaging"
 import { messaging } from "@/lib/firebase"
 import { createClient } from "@/lib/supabase/client"
 import { useNotificationStore } from "@/lib/store/useNotificationStore"
 
 export const usePushNotifications = () => {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { setPushEnabled } = useNotificationStore()
 
   // Listen for real-time push notifications when the tab is in the foreground
