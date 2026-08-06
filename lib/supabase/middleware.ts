@@ -38,14 +38,16 @@ export async function updateSession(request: NextRequest) {
   )
 
   let user = null
-  let authError: any = null
+  let authError: Error | null = null
 
   try {
     const { data, error } = await supabase.auth.getUser()
     user = data.user
     authError = error
-  } catch (err: any) {
-    authError = err
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      authError = err
+    }
   }
 
   // Check if auth failed due to network / offline condition
