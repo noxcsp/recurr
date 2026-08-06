@@ -11,7 +11,7 @@ import { SubscriptionsTab } from "@/components/mobile-tabs/subscriptions-tab"
 import { SettingsTab } from "@/components/mobile-tabs/settings-tab"
 
 // Nav height in px — shared with AddFAB so the button clears the bar exactly
-export const NAV_HEIGHT_PX = 72
+export const NAV_HEIGHT_PX = 56
 
 type Tab = "dashboard" | "calendar" | "subscriptions" | "settings"
 
