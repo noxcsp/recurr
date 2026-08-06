@@ -157,6 +157,33 @@ export async function deleteSubscription(id: string) {
   return { success: true }
 }
 
+export async function getSubscriptionPaymentCount(id: string) {
+  const idParsed = z.string().uuid().safeParse(id)
+  if (!idParsed.success) {
+    return { count: 0, error: "Invalid subscription ID." }
+  }
+
+  const supabase = await createClient()
+
+  const { data: userData, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !userData?.user) {
+    return { count: 0, error: "You must be logged in." }
+  }
+
+  const { count, error } = await supabase
+    .from("subscription_payments")
+    .select("id", { count: "exact", head: true })
+    .eq("subscription_id", id)
+    .eq("user_id", userData.user.id)
+
+  if (error) {
+    return { count: 0, error: error.message }
+  }
+
+  return { count: count ?? 0 }
+}
+
 export async function renewSubscription(
   id: string,
   startDateMode: "today" | "trial_end" = "today"
