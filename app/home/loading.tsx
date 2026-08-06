@@ -5,9 +5,9 @@ import { NAV_HEIGHT_PX } from "@/components/bottom-nav"
 
 export default function HomeLoading() {
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="flex h-mobile-screen flex-col bg-background">
       {/* Mobile layout skeleton (hidden on lg and above) */}
-      <div className="flex h-dvh flex-col lg:hidden">
+      <div className="flex h-mobile-screen flex-col lg:hidden">
         {/* Mobile top app bar header skeleton */}
         <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]">
           <Skeleton className="h-6 w-24 rounded-none" />

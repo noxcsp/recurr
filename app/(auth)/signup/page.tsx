@@ -48,6 +48,11 @@ export default function SignupPage() {
       met: passwordValue.length >= 8,
     },
     {
+      id: 'case',
+      label: 'At least one uppercase and one lowercase letter',
+      met: /[a-z]/.test(passwordValue) && /[A-Z]/.test(passwordValue),
+    },
+    {
       id: 'number',
       label: 'At least one number (0-9)',
       met: /[0-9]/.test(passwordValue),

@@ -148,4 +148,15 @@
   animation-timing-function: linear;
   animation-fill-mode: forwards;
   transform-origin: left;
+}
+
+@layer utilities {
+  .h-mobile-screen {
+    height: 100dvh;
+  }
+  @media (display-mode: standalone), (display-mode: fullscreen) {
+    .h-mobile-screen {
+      height: 100vh;
+    }
+  }
 }
