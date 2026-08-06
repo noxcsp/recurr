@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useTransition, useMemo } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { motion, AnimatePresence } from "motion/react"
 import { toast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
@@ -51,10 +49,7 @@ import {
 } from "lucide-react"
 
 import { updateSubscription } from "@/app/home/actions"
-import {
-  subscriptionSchema,
-  type SubscriptionFormValues,
-} from "@/lib/validations/subscription"
+import { type SubscriptionFormValues } from "@/lib/validations/subscription"
 import { Subscription } from "@/types/subscriptions"
 import { parseUtcToLocalDate, toUtcDate } from "@/lib/utils/date"
 import {

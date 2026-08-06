@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useTransition, useMemo } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { motion, AnimatePresence } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,10 +51,7 @@ import {
 import { toast } from "@/hooks/use-toast"
 
 import { addSubscription } from "@/app/home/actions"
-import {
-  subscriptionSchema,
-  type SubscriptionFormValues,
-} from "@/lib/validations/subscription"
+import { type SubscriptionFormValues } from "@/lib/validations/subscription"
 import { parseUtcToLocalDate, toUtcDate } from "@/lib/utils/date"
 import {
   PREDEFINED_SUBSCRIPTIONS,
@@ -156,38 +151,6 @@ export function AddSubscriptionForm({
     setOpen(newOpen)
   }
 
-  // Stable form values reference for React Hook Form
-  const formValues = useMemo<SubscriptionFormValues>(
-    () => ({
-      service_name: draftData.service_name || "",
-      category: draftData.category || "Other",
-      cost: draftData.cost || 0,
-      plan_type: (draftData.plan_type as "Weekly" | "Monthly" | "Annual") || "Monthly",
-      payment_mode: draftData.payment_mode || "",
-      next_due_date: draftData.next_due_date || (undefined as unknown as Date),
-      is_trial: draftData.is_trial || false,
-      trial_end_date: draftData.trial_end_date || undefined,
-      subscription_status: draftData.subscription_status || "unpaid",
-    }),
-    [
-      draftData.service_name,
-      draftData.category,
-      draftData.cost,
-      draftData.plan_type,
-      draftData.payment_mode,
-      draftData.next_due_date,
-      draftData.is_trial,
-      draftData.trial_end_date,
-      draftData.subscription_status,
-    ]
-  )
-
-  // Custom Form handling for Custom Service mode or raw validation
-  const form = useForm<SubscriptionFormValues>({
-    resolver: zodResolver(subscriptionSchema),
-    mode: "onChange",
-    values: formValues,
-  })
 
   const computeSubscriptionStatus = (
     dueDate: Date | undefined,
