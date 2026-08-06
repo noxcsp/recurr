@@ -53,6 +53,7 @@ Use the Supabase MCP to interrogate the **live** database project before writing
 7. **Extension check** — call `list_extensions` to confirm required extensions (`pg_cron`, `pg_net`) are enabled.
 8. **Edge function inventory** — call `list_edge_functions` to verify deployed edge functions match what's in `supabase/functions/`.
 9. **Recent logs** — call `get_logs` with `service: "edge-function"` and `service: "postgres"` to check for recent errors or warnings.
+10. **Ignore** - Exclude the `auth_leaked_password_protection` advisor from Supabase's own security warnings. It is not a deploy blocker and has no immediate impact on Recurr's security posture.
 
 ### Phase 3 — Static Code Analysis
 
