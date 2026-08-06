@@ -35,24 +35,20 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     }
 
     const existingReact = get().pendingReactivations[sub.id]
-    if (existingReact) {
-      if (existingReact.toastId) {
-        toast.dismiss(existingReact.toastId)
-      }
-      set((state) => {
-        const nextMap = { ...state.pendingReactivations }
-        delete nextMap[sub.id]
-        return { pendingReactivations: nextMap }
-      })
+    if (existingReact && existingReact.toastId) {
+      toast.dismiss(existingReact.toastId)
     }
 
-    if (get().committedStatuses[sub.id]) {
-      set((state) => {
-        const next = { ...state.committedStatuses }
-        delete next[sub.id]
-        return { committedStatuses: next }
-      })
-    }
+    set((state) => {
+      const nextReact = { ...state.pendingReactivations }
+      delete nextReact[sub.id]
+      const nextCommitted = { ...state.committedStatuses }
+      delete nextCommitted[sub.id]
+      return {
+        pendingReactivations: nextReact,
+        committedStatuses: nextCommitted,
+      }
+    })
 
     const toastId = toast.info("Subscription cancelled", {
       description: `${sub.service_name} marked as cancelled.`,
@@ -94,9 +90,9 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     }
 
     set((state) => {
-      const nextMap = { ...state.pendingCancellations }
-      delete nextMap[subId]
-      return { pendingCancellations: nextMap }
+      const nextCancellations = { ...state.pendingCancellations }
+      delete nextCancellations[subId]
+      return { pendingCancellations: nextCancellations }
     })
   },
 
@@ -136,24 +132,20 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     }
 
     const existingCancel = get().pendingCancellations[sub.id]
-    if (existingCancel) {
-      if (existingCancel.toastId) {
-        toast.dismiss(existingCancel.toastId)
-      }
-      set((state) => {
-        const nextMap = { ...state.pendingCancellations }
-        delete nextMap[sub.id]
-        return { pendingCancellations: nextMap }
-      })
+    if (existingCancel && existingCancel.toastId) {
+      toast.dismiss(existingCancel.toastId)
     }
 
-    if (get().committedStatuses[sub.id]) {
-      set((state) => {
-        const next = { ...state.committedStatuses }
-        delete next[sub.id]
-        return { committedStatuses: next }
-      })
-    }
+    set((state) => {
+      const nextCancel = { ...state.pendingCancellations }
+      delete nextCancel[sub.id]
+      const nextCommitted = { ...state.committedStatuses }
+      delete nextCommitted[sub.id]
+      return {
+        pendingCancellations: nextCancel,
+        committedStatuses: nextCommitted,
+      }
+    })
 
     const toastId = toast.info("Subscription reactivated", {
       description: `${sub.service_name} marked as active.`,
@@ -195,9 +187,9 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     }
 
     set((state) => {
-      const nextMap = { ...state.pendingReactivations }
-      delete nextMap[subId]
-      return { pendingReactivations: nextMap }
+      const nextReactivations = { ...state.pendingReactivations }
+      delete nextReactivations[subId]
+      return { pendingReactivations: nextReactivations }
     })
   },
 
