@@ -98,7 +98,7 @@ export function AccountTab() {
           <span className="truncate font-mono text-xs">{user.email}</span>
 
           <span className="font-semibold text-muted-foreground">User ID:</span>
-          
+
           <span className="font-semibold text-muted-foreground">Timezone:</span>
           <span>{profile?.timezone || "Not set"}</span>
 

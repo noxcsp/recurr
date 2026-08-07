@@ -177,9 +177,6 @@ export function calculateDashboardAnalytics(
     }
   }
 
-  // 7. Overdue Subscriptions
-  const overdueData = getOverdueSubscriptions(subscriptions, referenceDate)
-
   const formattedMonthlySpend = formatCurrency(currentMonthSpend)
   const formattedYearlySpend = formatCurrency(currentYearSpend)
 

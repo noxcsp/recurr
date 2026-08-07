@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Eye, EyeOff, Check, X } from 'lucide-react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -29,9 +29,9 @@ export default function SignupPage() {
     },
   })
 
-  const displayNameValue = form.watch('display_name') || ''
-  const emailValue = form.watch('email') || ''
-  const passwordValue = form.watch('password') || ''
+  const displayNameValue = useWatch({ control: form.control, name: 'display_name' }) || ''
+  const emailValue = useWatch({ control: form.control, name: 'email' }) || ''
+  const passwordValue = useWatch({ control: form.control, name: 'password' }) || ''
 
   const isDisplayNameValid = displayNameValue.trim().length > 0 && !form.formState.errors.display_name
   const isEmailValid = z.string().email().safeParse(emailValue).success && !form.formState.errors.email

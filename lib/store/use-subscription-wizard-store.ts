@@ -36,7 +36,7 @@ const INITIAL_DRAFT: WizardDraftData = {
   isStartedToday: false,
 }
 
-export const useSubscriptionWizardStore = create<SubscriptionWizardState>((set, get) => ({
+export const useSubscriptionWizardStore = create<SubscriptionWizardState>((set) => ({
   currentStep: 1,
   draftData: INITIAL_DRAFT,
   isCalendarTriggered: false,
