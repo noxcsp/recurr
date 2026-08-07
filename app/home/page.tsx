@@ -6,7 +6,7 @@ import { PaymentRecord } from "@/types/analytics"
 import { calculateDashboardAnalytics } from "@/lib/analytics"
 import { Sidebar } from "@/components/sidebar"
 import { SubscriptionCalendar } from "@/components/calendar"
-import { BottomNav } from "@/components/bottom-nav"
+import { MobileLayout } from "@/components/mobile-layout"
 import { HomeClient } from "@/components/home-client"
 
 export default async function HomePage() {
@@ -63,8 +63,8 @@ export default async function HomePage() {
       subscriptions={subscriptions}
       analytics={analytics}
     >
-      {/* Mobile layout — bottom navbar (hidden on lg and above) */}
-      <BottomNav />
+      {/* Mobile layout — wrapper with top/bottom navbars and tab switching */}
+      <MobileLayout />
 
       {/* Desktop layout — sidebar + calendar (hidden below lg) */}
       <div className="hidden h-screen overflow-hidden bg-background lg:flex">
