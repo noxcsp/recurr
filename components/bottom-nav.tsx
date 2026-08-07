@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, cloneElement, ReactElement } from "react"
 import { LayoutDashboard, CalendarDays, List, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddFAB } from "@/components/add-fab"
@@ -20,8 +20,8 @@ export function BottomNav() {
 
   return (
     <div className="flex h-mobile-screen flex-col lg:hidden">
-      {/* Mobile top app bar */}
-      <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]">
+      {/* Mobile top app bar — subtle bg-card surface separation */}
+      <header className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]">
         <span className="font-heading text-lg font-bold tracking-tight text-foreground">
           RECURR
         </span>
@@ -39,40 +39,39 @@ export function BottomNav() {
       {/* Floating Add Button — above the nav, bottom-right */}
       {activeTab === "dashboard" || activeTab === "subscriptions" ? <AddFAB bottomOffset={NAV_HEIGHT_PX} /> : null}
 
-      {/* Bottom navbar — 4 equal tabs with vertical separators */}
+      {/* Bottom navbar — subtle bg-card surface, grid distribution without vertical line clutter */}
       <nav
-        className="relative z-20 shrink-0 border-t border-border bg-background pb-[env(safe-area-inset-bottom,0px)]"
+        className="relative z-20 shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)]"
         style={{ height: `calc(${NAV_HEIGHT_PX}px + env(safe-area-inset-bottom, 0px))` }}
       >
         <div className="grid h-full grid-cols-4">
           <NavTab
             id="nav-dashboard"
             label="Dashboard"
-            icon={<LayoutDashboard strokeWidth={1.25} className="size-6" />}
+            icon={<LayoutDashboard className="size-5" />}
             active={activeTab === "dashboard"}
             onClick={() => setActiveTab("dashboard")}
           />
           <NavTab
             id="nav-calendar"
             label="Calendar"
-            icon={<CalendarDays strokeWidth={1.25} className="size-6" />}
+            icon={<CalendarDays className="size-5" />}
             active={activeTab === "calendar"}
             onClick={() => setActiveTab("calendar")}
           />
           <NavTab
             id="nav-subscriptions"
-            label="Subs"
-            icon={<List strokeWidth={1.25} className="size-6" />}
+            label="Subscriptions"
+            icon={<List className="size-5" />}
             active={activeTab === "subscriptions"}
             onClick={() => setActiveTab("subscriptions")}
           />
           <NavTab
             id="nav-settings"
             label="Settings"
-            icon={<Settings strokeWidth={1.25} className="size-6" />}
+            icon={<Settings className="size-5" />}
             active={activeTab === "settings"}
             onClick={() => setActiveTab("settings")}
-            isLast
           />
         </div>
       </nav>
@@ -85,36 +84,43 @@ export function BottomNav() {
 interface NavTabProps {
   id: string
   label: string
-  icon: React.ReactNode
+  icon: ReactElement<{ strokeWidth?: number; className?: string }>
   active: boolean
   onClick: () => void
-  isLast?: boolean
 }
 
-function NavTab({ id, label, icon, active, onClick, isLast = false }: NavTabProps) {
+function NavTab({ id, label, icon, active, onClick }: NavTabProps) {
   return (
     <button
       id={id}
       type="button"
       onClick={onClick}
       className={cn(
-        // Layout — fills the full block
-        "flex h-full flex-col items-center justify-center gap-1.5",
-        // Vertical separator on the right (except last tab)
-        !isLast && "border-r border-border",
-        // Typography — overline/eyebrow treatment to match reference
-        "text-[9px] font-semibold uppercase tracking-[0.12em] leading-none",
-        // State
-        "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        // Layout — fills grid column cell cleanly
+        "group relative flex h-full flex-col items-center justify-center gap-1.5",
+        // Typography — overline eyebrow styling
+        "text-[9px] uppercase tracking-[0.12em] leading-none",
+        // Micro-interactions & state feedback
+        "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring active:bg-muted/40",
         active
-          ? // Active: full block fill — foreground bg, inverted text
-            "bg-foreground text-background"
-          : // Inactive: transparent, muted text; subtle hover
-            "text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? "text-foreground font-bold"
+          : "text-muted-foreground font-medium hover:bg-muted/20 hover:text-foreground"
       )}
     >
-      {icon}
-      <span>{label}</span>
+      {/* Icon with weight & scale emphasis on active state */}
+      <span className={cn("transition-transform duration-150 ease-out", active && "scale-110")}>
+        {cloneElement(icon, {
+          strokeWidth: active ? 2.25 : 1.5,
+          className: cn(
+            "size-5 transition-colors duration-150",
+            active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+          )
+        })}
+      </span>
+      <span className={cn("transition-colors duration-150", active ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground")}>
+        {label}
+      </span>
     </button>
   )
 }
+
