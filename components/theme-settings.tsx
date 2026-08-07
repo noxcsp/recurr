@@ -11,11 +11,15 @@ const THEME_OPTIONS = [
   { value: "system", label: "System", icon: Monitor },
 ] as const
 
-export function ThemeSettings() {
+interface ThemeSettingsProps {
+  disabled?: boolean
+}
+
+export function ThemeSettings({ disabled = false }: ThemeSettingsProps) {
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="flex flex-col gap-3 border-b border-border px-4 py-4">
+    <div className={cn("flex flex-col gap-3 border-b border-border px-4 py-4", disabled && "pointer-events-none opacity-60")}>
       <div className="flex flex-col gap-1">
         <h2 className="text-xs font-heading font-semibold uppercase tracking-wide leading-none text-muted-foreground">
           Appearance
@@ -34,10 +38,13 @@ export function ThemeSettings() {
               type="button"
               role="radio"
               aria-checked={isActive}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => setTheme(value)}
+              disabled={disabled}
+              whileTap={disabled ? undefined : { scale: 0.96 }}
+              onClick={() => {
+                if (!disabled) setTheme(value)
+              }}
               className={cn(
-                "relative flex flex-1 items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                "relative flex flex-1 items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
                 isActive ? "text-background font-semibold" : "text-muted-foreground hover:text-foreground"
               )}
             >

@@ -11,12 +11,13 @@ import { Subscription } from "@/types/subscriptions"
 import { AddSubscriptionButton } from "@/components/add-subscription-button"
 import { SubscriptionList } from "@/components/subscription-list"
 import { signout } from "@/app/auth/actions"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { LogOut, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { NotificationPopover } from "@/components/notification-panel"
+
+import { cn } from "@/lib/utils"
 
 interface SidebarProps {
   user: User
@@ -25,7 +26,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
-  const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const { clearFcmToken } = usePushNotifications()
 
@@ -41,13 +41,13 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
   }
 
   return (
-    <aside className="flex h-screen w-1/5 flex-col border-r bg-card">
+    <aside className={cn("flex h-screen w-1/5 flex-col border-r bg-card relative", isSigningOut && "select-none")}>
       {/* Header — account & profile details */}
-      <div className="shrink-0 border-b p-6">
+      <div className={cn("shrink-0 border-b p-6", isSigningOut && "pointer-events-none opacity-60")}>
         <CardHeader className="p-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-heading font-bold">Welcome!</CardTitle>
-            <NotificationPopover />
+            <NotificationPopover disabled={isSigningOut} />
           </div>
           <CardDescription>
             You have successfully logged in. Here are your account and profile
@@ -133,7 +133,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
       </div>
 
       {/* Subscriptions list */}
-      <div id="desktop-subscriptions-list" className="flex min-h-0 flex-1 flex-col">
+      <div id="desktop-subscriptions-list" className={cn("flex min-h-0 flex-1 flex-col", isSigningOut && "pointer-events-none opacity-60")}>
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <h2 className="text-lg font-heading font-bold">My Subscriptions</h2>
@@ -143,11 +143,11 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
                 : `${subscriptions.length} subscription${subscriptions.length !== 1 ? "s" : ""}`}
             </p>
           </div>
-          <AddSubscriptionButton size="sm" variant="outline" />
+          <AddSubscriptionButton size="sm" variant="outline" disabled={isSigningOut} />
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <SubscriptionList subscriptions={subscriptions} />
+          <SubscriptionList subscriptions={subscriptions} disabled={isSigningOut} />
         </div>
       </div>
 

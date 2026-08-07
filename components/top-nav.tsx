@@ -74,7 +74,13 @@ export function TopNav({ onSelectTab }: TopNavProps) {
         <NotificationPopover />
 
         {/* Personal Tactile User Avatar Pill Trigger & Settings Sheet */}
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <Sheet
+          open={sheetOpen}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen && isSigningOut) return
+            setSheetOpen(nextOpen)
+          }}
+        >
           <SheetTrigger
             render={
               <motion.button
@@ -94,7 +100,11 @@ export function TopNav({ onSelectTab }: TopNavProps) {
             />
           </SheetTrigger>
 
-          <SheetContent side="right" className="flex flex-col w-4/5 sm:max-w-xs p-0 bg-card border-l border-border">
+          <SheetContent
+            side="right"
+            showCloseButton={!isSigningOut}
+            className="flex flex-col w-4/5 sm:max-w-xs p-0 bg-card border-l border-border"
+          >
             <SheetHeader className="border-b border-border px-4 py-3">
               <SheetTitle className="font-heading text-lg font-bold">Settings</SheetTitle>
             </SheetHeader>
@@ -121,12 +131,14 @@ export function TopNav({ onSelectTab }: TopNavProps) {
               <div className="flex flex-col border-b border-border p-2 space-y-1">
                 {/* Account Button */}
                 <motion.button
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={isSigningOut ? undefined : { scale: 0.98 }}
+                  disabled={isSigningOut}
                   onClick={() => {
+                    if (isSigningOut) return
                     setSheetOpen(false)
                     onSelectTab?.("account")
                   }}
-                  className="flex items-center justify-between w-full p-3 text-left border border-transparent hover:border-border hover:bg-muted/40 transition-colors group"
+                  className="flex items-center justify-between w-full p-3 text-left border border-transparent hover:border-border hover:bg-muted/40 transition-colors group disabled:pointer-events-none disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3">
                     <User className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" aria-hidden="true" />
@@ -137,12 +149,14 @@ export function TopNav({ onSelectTab }: TopNavProps) {
 
                 {/* Notifications Button */}
                 <motion.button
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={isSigningOut ? undefined : { scale: 0.98 }}
+                  disabled={isSigningOut}
                   onClick={() => {
+                    if (isSigningOut) return
                     setSheetOpen(false)
                     onSelectTab?.("notifications")
                   }}
-                  className="flex items-center justify-between w-full p-3 text-left border border-transparent hover:border-border hover:bg-muted/40 transition-colors group"
+                  className="flex items-center justify-between w-full p-3 text-left border border-transparent hover:border-border hover:bg-muted/40 transition-colors group disabled:pointer-events-none disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3">
                     <Bell className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" aria-hidden="true" />
@@ -153,7 +167,7 @@ export function TopNav({ onSelectTab }: TopNavProps) {
               </div>
 
               {/* Theme Settings Switch */}
-              <ThemeSettings />
+              <ThemeSettings disabled={isSigningOut} />
 
               {/* Sign Out Button at Bottom */}
               <div className="mt-auto border-t border-border p-4">
