@@ -8,7 +8,8 @@ import { AddFAB } from "@/components/add-fab"
 import { DashboardTab } from "@/components/mobile-tabs/dashboard-tab"
 import { CalendarTab } from "@/components/mobile-tabs/calendar-tab"
 import { SubscriptionsTab } from "@/components/mobile-tabs/subscriptions-tab"
-import { SettingsTab } from "@/components/mobile-tabs/settings-tab"
+import { AccountTab } from "@/components/mobile-tabs/account-tab"
+import { NotificationsTab } from "@/components/mobile-tabs/notifications-tab"
 
 interface MobileLayoutProps {
   initialTab?: Tab
@@ -19,8 +20,8 @@ export function MobileLayout({ initialTab = "dashboard" }: MobileLayoutProps) {
 
   return (
     <div className="flex h-mobile-screen flex-col lg:hidden">
-      {/* Extracted Top App Bar */}
-      <TopNav />
+      {/* Extracted Top App Bar with Settings Right Sheet */}
+      <TopNav onSelectTab={setActiveTab} />
 
       {/* Main Tab Content Container with Spring Motion Page Transitions */}
       <main className="relative min-h-0 flex-1 overflow-y-auto">
@@ -39,7 +40,8 @@ export function MobileLayout({ initialTab = "dashboard" }: MobileLayoutProps) {
             {activeTab === "dashboard" && <DashboardTab />}
             {activeTab === "calendar" && <CalendarTab />}
             {activeTab === "subscriptions" && <SubscriptionsTab />}
-            {activeTab === "settings" && <SettingsTab />}
+            {activeTab === "account" && <AccountTab />}
+            {activeTab === "notifications" && <NotificationsTab />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -49,7 +51,7 @@ export function MobileLayout({ initialTab = "dashboard" }: MobileLayoutProps) {
         <AddFAB bottomOffset={NAV_HEIGHT_PX} />
       )}
 
-      {/* Extracted Motion Bottom Navbar */}
+      {/* Extracted Motion Bottom Navbar (3 tabs: Dashboard, Calendar, Subscriptions) */}
       <BottomNavbar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   )

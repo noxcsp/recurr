@@ -1,7 +1,7 @@
 "use client"
 
 import { cloneElement, ReactElement } from "react"
-import { LayoutDashboard, CalendarDays, List, Settings } from "lucide-react"
+import { LayoutDashboard, CalendarDays, List } from "lucide-react"
 import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 import { MobileLayout } from "@/components/mobile-layout"
@@ -9,7 +9,7 @@ import { MobileLayout } from "@/components/mobile-layout"
 // Nav height in px — shared with AddFAB and loading skeleton so element clears the bar exactly
 export const NAV_HEIGHT_PX = 56
 
-export type Tab = "dashboard" | "calendar" | "subscriptions" | "settings"
+export type Tab = "dashboard" | "calendar" | "subscriptions" | "account" | "notifications"
 
 export interface BottomNavbarProps {
   activeTab: Tab
@@ -17,7 +17,7 @@ export interface BottomNavbarProps {
 }
 
 export function BottomNavbar({ activeTab, onTabChange }: BottomNavbarProps) {
-  const tabs: { id: Tab; label: string; icon: ReactElement<{ strokeWidth?: number; className?: string }> }[] = [
+  const tabs: { id: "dashboard" | "calendar" | "subscriptions"; label: string; icon: ReactElement<{ strokeWidth?: number; className?: string }> }[] = [
     {
       id: "dashboard",
       label: "Dashboard",
@@ -33,11 +33,6 @@ export function BottomNavbar({ activeTab, onTabChange }: BottomNavbarProps) {
       label: "Subscriptions",
       icon: <List className="size-5" />,
     },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: <Settings className="size-5" />,
-    },
   ]
 
   return (
@@ -45,7 +40,7 @@ export function BottomNavbar({ activeTab, onTabChange }: BottomNavbarProps) {
       className="relative z-20 shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)]"
       style={{ height: `calc(${NAV_HEIGHT_PX}px + env(safe-area-inset-bottom, 0px))` }}
     >
-      <div role="tablist" aria-label="Main Navigation" className="grid h-full grid-cols-4 relative">
+      <div role="tablist" aria-label="Main Navigation" className="grid h-full grid-cols-3 relative">
         {tabs.map((tab) => (
           <NavTab
             key={tab.id}
@@ -87,7 +82,7 @@ function NavTab({ id, label, icon, active, onClick }: NavTabProps) {
           : "text-muted-foreground font-medium hover:text-foreground"
       )}
     >
-      {/* Active tab sliding background highlight pill (Emil's layoutId motion technique) */}
+      {/* Active tab sliding background highlight pill */}
       {active && (
         <motion.div
           layoutId="bottom-nav-active-pill"
