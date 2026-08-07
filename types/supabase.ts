@@ -146,6 +146,7 @@ export type Database = {
           service_name: string
           subscription_status: Database["public"]["Enums"]["status"]
           trial_end_date: string | null
+          cancelled_at: string | null
           updated_at: string
           user_id: string
         }
@@ -161,6 +162,7 @@ export type Database = {
           service_name: string
           subscription_status?: Database["public"]["Enums"]["status"]
           trial_end_date?: string | null
+          cancelled_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -176,6 +178,7 @@ export type Database = {
           service_name?: string
           subscription_status?: Database["public"]["Enums"]["status"]
           trial_end_date?: string | null
+          cancelled_at?: string | null
           updated_at?: string
           user_id?: string
         }

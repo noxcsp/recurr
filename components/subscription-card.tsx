@@ -418,7 +418,11 @@ export function SubscriptionCard({
                 </Badge>
               )}
               <span className="text-[11px] text-muted-foreground md:text-xs lg:text-xs">
-                {formatDueDate(refDateStr)}
+                {isCancelled
+                  ? formatDueDate(sub.cancelled_at || refDateStr)
+                    ? `last ${formatDueDate(sub.cancelled_at || refDateStr)}`
+                    : ""
+                  : formatDueDate(refDateStr)}
               </span>
               {!isCancelled && dueDays !== Infinity && (
                 <span

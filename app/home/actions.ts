@@ -117,6 +117,7 @@ export async function cancelSubscription(id: string) {
     .from("subscriptions")
     .update({
       subscription_status: "cancelled" as const,
+      cancelled_at: new Date().toISOString(),
     })
     .eq("id", id)
     .eq("user_id", userData.user.id)
@@ -264,6 +265,7 @@ export async function renewSubscription(
         trial_end_date: null,
         next_due_date: nextDueDateStr,
         subscription_status: "unpaid",
+        cancelled_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -277,6 +279,7 @@ export async function renewSubscription(
       .from("subscriptions")
       .update({
         subscription_status: "paid" as const,
+        cancelled_at: null,
       })
       .eq("id", id)
       .eq("user_id", userData.user.id)

@@ -34,7 +34,7 @@ export default async function HomePage() {
     supabase
       .from("subscriptions")
       .select(
-        "id, user_id, service_name, category, cost, plan_type, payment_mode, next_due_date, is_trial, trial_end_date, subscription_status, created_at"
+        "id, user_id, service_name, category, cost, plan_type, payment_mode, next_due_date, is_trial, trial_end_date, subscription_status, created_at, cancelled_at"
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
