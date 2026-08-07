@@ -105,7 +105,7 @@ export function TopNav({ onSelectTab }: TopNavProps) {
             showCloseButton={!isSigningOut}
             className="flex flex-col w-4/5 sm:max-w-xs p-0 bg-card border-l border-border"
           >
-            <SheetHeader className="border-b border-border px-4 py-3">
+            <SheetHeader className="border-b border-border px-4 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
               <SheetTitle className="font-heading text-lg font-bold">Settings</SheetTitle>
             </SheetHeader>
 
@@ -169,8 +169,7 @@ export function TopNav({ onSelectTab }: TopNavProps) {
               {/* Theme Settings Switch */}
               <ThemeSettings disabled={isSigningOut} />
 
-              {/* Sign Out Button at Bottom */}
-              <div className="mt-auto border-t border-border p-4">
+              <div className="mt-auto border-t border-border px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
                 <form onSubmit={handleSignOut}>
                   <Button
                     variant="outline"
