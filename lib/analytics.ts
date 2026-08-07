@@ -1,6 +1,6 @@
 import type { Subscription } from "@/types/subscriptions"
 import type { PaymentRecord, DashboardAnalytics } from "@/types/analytics"
-import type { OverdueSubscriptionItem } from "@/components/overdue-subscriptions"
+import type { ActionRequiredListItem } from "@/components/action-required-list"
 import { formatCurrency } from "@/lib/utils"
 
 /**
@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/utils"
 export function getOverdueSubscriptions(
   subscriptions: Subscription[],
   referenceDate: Date = new Date()
-): { count: number; overdueItems: OverdueSubscriptionItem[] } {
+): { count: number; overdueItems: ActionRequiredListItem[] } {
   const today = new Date(referenceDate)
   today.setHours(0, 0, 0, 0)
 
@@ -26,7 +26,7 @@ export function getOverdueSubscriptions(
     return dueDate < today
   })
 
-  const overdueItems: OverdueSubscriptionItem[] = overdueList.map((sub) => {
+  const overdueItems: ActionRequiredListItem[] = overdueList.map((sub) => {
     let diffDays = 1
     if (sub.next_due_date) {
       const [y, m, d] = sub.next_due_date.split("-").map(Number)

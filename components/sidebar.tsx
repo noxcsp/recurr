@@ -133,7 +133,7 @@ export function Sidebar({ user, profile, subscriptions }: SidebarProps) {
       </div>
 
       {/* Subscriptions list */}
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div id="desktop-subscriptions-list" className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <h2 className="text-lg font-heading font-bold">My Subscriptions</h2>
