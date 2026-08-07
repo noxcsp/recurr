@@ -31,6 +31,8 @@ export interface SubscriptionCardProps {
   sub: Subscription
   enableSwipe?: boolean
   showActions?: boolean
+  index?: number
+  animateEntry?: boolean
 }
 
 function getDaysRemaining(dateStr: string | null): number {
@@ -171,6 +173,8 @@ export function SubscriptionCard({
   sub,
   enableSwipe = true,
   showActions = true,
+  index = 0,
+  animateEntry = false,
 }: SubscriptionCardProps) {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -191,15 +195,12 @@ export function SubscriptionCard({
   const dueDays = getDaysRemaining(refDateStr)
   const statusBadge = getStatusBadge({ ...sub, subscription_status: effectiveStatus })
 
-  // Motion value for physics-driven gestures (Emil Kowalski principles)
+  // Motion value for physics-driven gestures
   const x = useMotionValue(0)
 
   // Dynamic interpolation for continuous gesture feedback
-  // Right drag (x > 0): Hard Delete action cue
   const deleteBgOpacity = useTransform(x, [0, 60], [0, 1])
   const deleteIconScale = useTransform(x, [0, 60, 100], [0.8, 1, 1.2])
-
-  // Left drag (x < 0): Stage Cancellation action cue
   const cancelBgOpacity = useTransform(x, [-60, 0], [1, 0])
   const cancelIconScale = useTransform(x, [-100, -60, 0], [1.2, 1, 0.8])
 
@@ -289,7 +290,18 @@ export function SubscriptionCard({
 
   return (
     <>
-      <li className="relative overflow-hidden list-none">
+      <motion.li
+        layout
+        initial={animateEntry ? { opacity: 0, y: 10, scale: 0.97 } : false}
+        animate={animateEntry ? { opacity: 1, y: 0, scale: 1 } : undefined}
+        transition={{
+          type: "spring",
+          stiffness: 450,
+          damping: 30,
+          delay: index * 0.04,
+        }}
+        className="relative overflow-hidden list-none"
+      >
         {/* Revealed Action Zones on Swipe */}
         {enableSwipe && (
           <>
@@ -503,7 +515,7 @@ export function SubscriptionCard({
             )}
           </div>
         </motion.div>
-      </li>
+      </motion.li>
 
       {/* Edit Form Modal */}
       <EditSubscriptionForm
