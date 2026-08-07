@@ -1,120 +1,128 @@
 "use client"
 
-import { useState } from "react"
-import { LayoutDashboard, CalendarDays, List, Settings } from "lucide-react"
+import { cloneElement, ReactElement } from "react"
+import { LayoutDashboard, CalendarDays, List } from "lucide-react"
+import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
-import { AddFAB } from "@/components/add-fab"
-import { NotificationPopover } from "@/components/notification-panel"
-import { DashboardTab } from "@/components/mobile-tabs/dashboard-tab"
-import { CalendarTab } from "@/components/mobile-tabs/calendar-tab"
-import { SubscriptionsTab } from "@/components/mobile-tabs/subscriptions-tab"
-import { SettingsTab } from "@/components/mobile-tabs/settings-tab"
+import { MobileLayout } from "@/components/mobile-layout"
 
-// Nav height in px — shared with AddFAB so the button clears the bar exactly
+// Nav height in px — shared with AddFAB and loading skeleton so element clears the bar exactly
 export const NAV_HEIGHT_PX = 56
 
-type Tab = "dashboard" | "calendar" | "subscriptions" | "settings"
+export type Tab = "dashboard" | "calendar" | "subscriptions" | "account" | "notifications"
 
-export function BottomNav() {
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard")
-
-  return (
-    <div className="flex h-mobile-screen flex-col lg:hidden">
-      {/* Mobile top app bar */}
-      <header className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]">
-        <span className="font-heading text-lg font-bold tracking-tight text-foreground">
-          RECURR
-        </span>
-        <NotificationPopover />
-      </header>
-
-      {/* Tab content — fills all space above navbar */}
-      <main className="min-h-0 flex-1 overflow-y-auto">
-        {activeTab === "dashboard" && <DashboardTab />}
-        {activeTab === "calendar" && <CalendarTab />}
-        {activeTab === "subscriptions" && <SubscriptionsTab />}
-        {activeTab === "settings" && <SettingsTab />}
-      </main>
-
-      {/* Floating Add Button — above the nav, bottom-right */}
-      {activeTab === "dashboard" || activeTab === "subscriptions" ? <AddFAB bottomOffset={NAV_HEIGHT_PX} /> : null}
-
-      {/* Bottom navbar — 4 equal tabs with vertical separators */}
-      <nav
-        className="relative z-20 shrink-0 border-t border-border bg-background pb-[env(safe-area-inset-bottom,0px)]"
-        style={{ height: `calc(${NAV_HEIGHT_PX}px + env(safe-area-inset-bottom, 0px))` }}
-      >
-        <div className="grid h-full grid-cols-4">
-          <NavTab
-            id="nav-dashboard"
-            label="Dashboard"
-            icon={<LayoutDashboard strokeWidth={1.25} className="size-6" />}
-            active={activeTab === "dashboard"}
-            onClick={() => setActiveTab("dashboard")}
-          />
-          <NavTab
-            id="nav-calendar"
-            label="Calendar"
-            icon={<CalendarDays strokeWidth={1.25} className="size-6" />}
-            active={activeTab === "calendar"}
-            onClick={() => setActiveTab("calendar")}
-          />
-          <NavTab
-            id="nav-subscriptions"
-            label="Subs"
-            icon={<List strokeWidth={1.25} className="size-6" />}
-            active={activeTab === "subscriptions"}
-            onClick={() => setActiveTab("subscriptions")}
-          />
-          <NavTab
-            id="nav-settings"
-            label="Settings"
-            icon={<Settings strokeWidth={1.25} className="size-6" />}
-            active={activeTab === "settings"}
-            onClick={() => setActiveTab("settings")}
-            isLast
-          />
-        </div>
-      </nav>
-    </div>
-  )
+export interface BottomNavbarProps {
+  activeTab: Tab
+  onTabChange: (tab: Tab) => void
 }
 
-// ── Nav tab button ────────────────────────────────────────────────────────────
+export function BottomNavbar({ activeTab, onTabChange }: BottomNavbarProps) {
+  const tabs: { id: "dashboard" | "calendar" | "subscriptions"; label: string; icon: ReactElement<{ strokeWidth?: number; className?: string }> }[] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: <LayoutDashboard className="size-5" />,
+    },
+    {
+      id: "calendar",
+      label: "Calendar",
+      icon: <CalendarDays className="size-5" />,
+    },
+    {
+      id: "subscriptions",
+      label: "Subscriptions",
+      icon: <List className="size-5" />,
+    },
+  ]
+
+  return (
+    <nav
+      className="relative z-20 shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)]"
+      style={{ height: `calc(${NAV_HEIGHT_PX}px + env(safe-area-inset-bottom, 0px))` }}
+    >
+      <div role="tablist" aria-label="Main Navigation" className="grid h-full grid-cols-3 relative">
+        {tabs.map((tab) => (
+          <NavTab
+            key={tab.id}
+            id={`nav-${tab.id}`}
+            label={tab.label}
+            icon={tab.icon}
+            active={activeTab === tab.id}
+            onClick={() => onTabChange(tab.id)}
+          />
+        ))}
+      </div>
+    </nav>
+  )
+}
 
 interface NavTabProps {
   id: string
   label: string
-  icon: React.ReactNode
+  icon: ReactElement<{ strokeWidth?: number; className?: string }>
   active: boolean
   onClick: () => void
-  isLast?: boolean
 }
 
-function NavTab({ id, label, icon, active, onClick, isLast = false }: NavTabProps) {
+function NavTab({ id, label, icon, active, onClick }: NavTabProps) {
   return (
-    <button
+    <motion.button
       id={id}
       type="button"
+      role="tab"
+      aria-selected={active}
+      whileTap={{ scale: 0.94 }}
       onClick={onClick}
       className={cn(
-        // Layout — fills the full block
-        "flex h-full flex-col items-center justify-center gap-1.5",
-        // Vertical separator on the right (except last tab)
-        !isLast && "border-r border-border",
-        // Typography — overline/eyebrow treatment to match reference
-        "text-[9px] font-semibold uppercase tracking-[0.12em] leading-none",
-        // State
+        "group relative flex h-full flex-col items-center justify-center gap-1 z-10",
+        "text-[9px] uppercase tracking-[0.12em] leading-none",
         "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         active
-          ? // Active: full block fill — foreground bg, inverted text
-            "bg-foreground text-background"
-          : // Inactive: transparent, muted text; subtle hover
-            "text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? "text-foreground font-bold"
+          : "text-muted-foreground font-medium hover:text-foreground"
       )}
     >
-      {icon}
-      <span>{label}</span>
-    </button>
+      {/* Active tab sliding background highlight pill */}
+      {active && (
+        <motion.div
+          layoutId="bottom-nav-active-pill"
+          className="absolute inset-x-2 inset-y-1.5 rounded-sm bg-muted/60"
+          transition={{ type: "spring", stiffness: 450, damping: 32 }}
+        />
+      )}
+
+      {/* Icon with animated spring scale & weight emphasis */}
+      <motion.span
+        animate={{ scale: active ? 1.1 : 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="relative z-10"
+      >
+        {cloneElement(icon, {
+          strokeWidth: active ? 2.25 : 1.5,
+          className: cn(
+            "size-5 transition-colors duration-150",
+            active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+          ),
+        })}
+      </motion.span>
+
+      {/* Label */}
+      <span
+        className={cn(
+          "relative z-10 transition-colors duration-150",
+          active ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground"
+        )}
+      >
+        {label}
+      </span>
+    </motion.button>
   )
+}
+
+/**
+ * Mobile layout wrapper component, maintained as default BottomNav export
+ * for seamless backwards compatibility.
+ */
+export function BottomNav() {
+  return <MobileLayout />
 }

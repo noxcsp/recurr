@@ -63,7 +63,8 @@ Stores active and upcoming subscriptions.
 | `next_due_date` | `date` | NOT NULL | Next renewal date. |
 | `is_trial` | `boolean` | NOT NULL, Default: `false` | Active trial flag. |
 | `trial_end_date` | `date` | Nullable | Trial end date if `is_trial` is true. |
-| `subscription_status` | `public.status` | NOT NULL, Default: `'unpaid'` | Status (`paid`, `unpaid`, `overdue`). |
+| `subscription_status` | `public.status` | NOT NULL, Default: `'unpaid'` | Status (`paid`, `unpaid`, `overdue`, `cancelled`). |
+| `cancelled_at` | `timestamptz` | Nullable | Timestamp when subscription was cancelled. |
 | `created_at` | `timestamptz` | Default: `timezone('utc'::text, now())` | Creation timestamp. |
 | `updated_at` | `timestamptz` | Default: `timezone('utc'::text, now())` | Update timestamp. |
 

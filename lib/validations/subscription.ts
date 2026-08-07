@@ -18,6 +18,7 @@ export const subscriptionSchema = z
     is_trial: z.boolean(),
     trial_end_date: z.date().optional().nullable(),
     subscription_status: z.enum(["unpaid", "paid", "overdue", "cancelled"]),
+    cancelled_at: z.union([z.date(), z.string()]).optional().nullable(),
   })
   .refine(
     (data) => {

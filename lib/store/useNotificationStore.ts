@@ -19,7 +19,7 @@ export interface NotificationState {
 
 export const useNotificationStore = create<NotificationState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       pushEnabled: false,
       notifyAdvanceDays: 3,
       notificationTtlDays: 3,

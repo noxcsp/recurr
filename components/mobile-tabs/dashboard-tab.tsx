@@ -2,7 +2,7 @@
 
 import { useHomeData } from "@/contexts/home-data-context"
 import { DashboardMetrics } from "@/components/dashboard-metrics"
-import { OverdueSubscriptions } from "@/components/overdue-subscriptions"
+import { ActionRequiredList } from "@/components/action-required-list"
 
 function getTimeBasedGreeting(): string {
   const hour = new Date().getHours()
@@ -38,7 +38,7 @@ export function DashboardTab() {
         topSubscriptionCost={analytics?.topSubscriptionCost}
         topSubscriptionBillingCycle={analytics?.topSubscriptionBillingCycle}
       />
-      <OverdueSubscriptions subscriptions={subscriptions} />
+      <ActionRequiredList subscriptions={subscriptions} />
     </div>
   )
 }

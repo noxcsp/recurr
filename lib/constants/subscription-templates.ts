@@ -1,5 +1,3 @@
-import { type SubscriptionFormValues } from "@/lib/validations/subscription"
-
 export interface ServicePlan {
   id: string
   name: string

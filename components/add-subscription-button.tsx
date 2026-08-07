@@ -18,6 +18,8 @@ interface AddSubscriptionButtonProps {
   className?: string
   /** Custom button label or icon override */
   children?: React.ReactNode
+  /** Disable the button and form trigger */
+  disabled?: boolean
 }
 
 /**
@@ -29,6 +31,7 @@ export function AddSubscriptionButton({
   size = "sm",
   className,
   children,
+  disabled = false,
 }: AddSubscriptionButtonProps) {
   const [open, setOpen] = useState(false)
 
@@ -39,7 +42,10 @@ export function AddSubscriptionButton({
         variant={variant}
         size={size}
         className={className}
-        onClick={() => setOpen(true)}
+        disabled={disabled}
+        onClick={() => {
+          if (!disabled) setOpen(true)
+        }}
       >
         {children ?? (
           <>
@@ -48,11 +54,13 @@ export function AddSubscriptionButton({
           </>
         )}
       </Button>
-      <AddSubscriptionForm
-        defaultDate={defaultDate}
-        externalOpen={open}
-        onExternalOpenChange={setOpen}
-      />
+      {!disabled && (
+        <AddSubscriptionForm
+          defaultDate={defaultDate}
+          externalOpen={open}
+          onExternalOpenChange={setOpen}
+        />
+      )}
     </>
   )
 }

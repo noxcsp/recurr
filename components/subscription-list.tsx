@@ -3,16 +3,18 @@
 import { Subscription } from "@/types/subscriptions"
 import { parseUtcToLocalDate } from "@/lib/utils/date"
 import { SubscriptionCard } from "@/components/subscription-card"
+import { cn } from "@/lib/utils"
 
 interface SubscriptionListProps {
   subscriptions: Subscription[]
   emptyMessage?: string
+  disabled?: boolean
 }
 
-export function SubscriptionList({ subscriptions, emptyMessage }: SubscriptionListProps) {
+export function SubscriptionList({ subscriptions, emptyMessage, disabled = false }: SubscriptionListProps) {
   if (subscriptions.length === 0) {
     return (
-      <div className="border border-dashed border-border p-6 text-center text-xs text-muted-foreground md:text-sm lg:text-sm">
+      <div className={cn("border border-dashed border-border p-6 text-center text-xs text-muted-foreground md:text-sm lg:text-sm", disabled && "pointer-events-none opacity-60")}>
         {emptyMessage || "No subscriptions yet. Add one to get started."}
       </div>
     )
@@ -27,7 +29,7 @@ export function SubscriptionList({ subscriptions, emptyMessage }: SubscriptionLi
   })
 
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className={cn("flex flex-col gap-3", disabled && "pointer-events-none opacity-60")}>
       {sortedSubscriptions.map((sub) => (
         <SubscriptionCard key={sub.id} sub={sub} />
       ))}

@@ -6,7 +6,7 @@ import { PaymentRecord } from "@/types/analytics"
 import { calculateDashboardAnalytics } from "@/lib/analytics"
 import { Sidebar } from "@/components/sidebar"
 import { SubscriptionCalendar } from "@/components/calendar"
-import { BottomNav } from "@/components/bottom-nav"
+import { MobileLayout } from "@/components/mobile-layout"
 import { HomeClient } from "@/components/home-client"
 
 export default async function HomePage() {
@@ -34,7 +34,7 @@ export default async function HomePage() {
     supabase
       .from("subscriptions")
       .select(
-        "id, user_id, service_name, category, cost, plan_type, payment_mode, next_due_date, is_trial, trial_end_date, subscription_status, created_at"
+        "id, user_id, service_name, category, cost, plan_type, payment_mode, next_due_date, is_trial, trial_end_date, subscription_status, created_at, cancelled_at"
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
@@ -63,8 +63,8 @@ export default async function HomePage() {
       subscriptions={subscriptions}
       analytics={analytics}
     >
-      {/* Mobile layout — bottom navbar (hidden on lg and above) */}
-      <BottomNav />
+      {/* Mobile layout — wrapper with top/bottom navbars and tab switching */}
+      <MobileLayout />
 
       {/* Desktop layout — sidebar + calendar (hidden below lg) */}
       <div className="hidden h-screen overflow-hidden bg-background lg:flex">

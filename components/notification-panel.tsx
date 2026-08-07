@@ -193,7 +193,11 @@ function NotificationItem({ notification, isProcessing, onTap }: NotificationIte
 
 // ── Notification Popover ─────────────────────────────────────────────────────
 
-export function NotificationPopover() {
+interface NotificationPopoverProps {
+  disabled?: boolean
+}
+
+export function NotificationPopover({ disabled = false }: NotificationPopoverProps) {
   const [open, setOpen] = useState(false)
   const {
     notifications,
@@ -205,14 +209,21 @@ export function NotificationPopover() {
   } = useNotifications()
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={disabled ? false : open}
+      onOpenChange={(nextOpen) => {
+        if (disabled) return
+        setOpen(nextOpen)
+      }}
+    >
       <PopoverTrigger
         render={
           <Button
             variant="outline"
             size="icon"
+            disabled={disabled}
             aria-label="Open notifications"
-            className="relative h-9 w-9 border border-border bg-background hover:bg-muted rounded-none shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="relative h-9 w-9 border border-border bg-background hover:bg-muted rounded-none shadow-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none"
           />
         }
       >

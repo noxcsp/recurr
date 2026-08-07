@@ -17,6 +17,7 @@ import { AddSubscriptionButton } from "@/components/add-subscription-button"
 import { SubscriptionCard } from "@/components/subscription-card"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn, formatCurrency } from "@/lib/utils"
+import { motion, AnimatePresence } from "motion/react"
 
 const localizer = dateFnsLocalizer({
   format,
@@ -56,6 +57,44 @@ const mobileFormats: Formats = {
   weekdayFormat: (date: Date) => format(date, "eeeeee").toUpperCase(),
 }
 
+// ── Context for stable cell rendering ────────────────────────────────────────
+
+interface CalendarSelectionContextValue {
+  selectedDate: Date
+  onSelectDate: (d: Date) => void
+  dotMap: Map<string, Set<Subscription["plan_type"]>>
+  currentMonth: number
+}
+
+const CalendarSelectionContext = React.createContext<CalendarSelectionContextValue>({
+  selectedDate: new Date(),
+  onSelectDate: () => { },
+  dotMap: new Map(),
+  currentMonth: new Date().getMonth(),
+})
+
+// ── Helpers ─────────────────────────────────────────────────────────────────────
+
+/** Compare two dates by year-month-day only */
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+/** Build a lookup: "YYYY-MM-DD" → unique plan_types present on that day */
+function buildDotMap(events: SubscriptionEvent[]): Map<string, Set<Subscription["plan_type"]>> {
+  const map = new Map<string, Set<Subscription["plan_type"]>>()
+  for (const ev of events) {
+    const key = `${ev.start.getFullYear()}-${String(ev.start.getMonth() + 1).padStart(2, "0")}-${String(ev.start.getDate()).padStart(2, "0")}`
+    if (!map.has(key)) map.set(key, new Set())
+    map.get(key)!.add(ev.subscription.plan_type)
+  }
+  return map
+}
+
 // ── Toolbar ────────────────────────────────────────────────────────────────────
 
 function MobileCalendarToolbar({
@@ -80,14 +119,24 @@ function MobileCalendarToolbar({
         <span className="text-xs font-semibold uppercase tracking-wide leading-none text-muted-foreground">
           {year}
         </span>
-        <h1 className="rbc-toolbar-label text-xl font-heading font-semibold leading-tight text-foreground md:text-2xl">
-          {monthName}
-        </h1>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.h1
+            key={`${year}-${monthName}`}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="rbc-toolbar-label text-xl font-heading font-semibold leading-tight text-foreground md:text-2xl"
+          >
+            {monthName}
+          </motion.h1>
+        </AnimatePresence>
       </div>
 
       {/* Right: today + prev/next nav */}
       <div className="rbc-btn-group inline-flex items-center gap-1 border border-border bg-muted p-1">
-        <button
+        <motion.button
+          whileTap={{ scale: 0.94 }}
           type="button"
           onClick={() => onNavigate("TODAY")}
           className={cn(
@@ -98,48 +147,96 @@ function MobileCalendarToolbar({
           )}
         >
           Today
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.92 }}
           type="button"
           onClick={() => onNavigate("PREV")}
           aria-label="Previous month"
           className="flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <ChevronLeft className="size-4" strokeWidth={1.5} />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.92 }}
           type="button"
           onClick={() => onNavigate("NEXT")}
           aria-label="Next month"
           className="flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <ChevronRight className="size-4" strokeWidth={1.5} />
-        </button>
+        </motion.button>
       </div>
     </div>
   )
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────────
+// ── Date Cell Wrapper Component (Top level, constant reference) ───────────────
 
-/** Compare two dates by year-month-day only */
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
-}
+function DateCellWrapper({ children, value }: DateCellWrapperProps) {
+  const { selectedDate, onSelectDate, dotMap, currentMonth } = React.useContext(CalendarSelectionContext)
 
-/** Build a lookup: "YYYY-MM-DD" → unique plan_types present on that day */
-function buildDotMap(events: SubscriptionEvent[]): Map<string, Set<Subscription["plan_type"]>> {
-  const map = new Map<string, Set<Subscription["plan_type"]>>()
-  for (const ev of events) {
-    const key = `${ev.start.getFullYear()}-${String(ev.start.getMonth() + 1).padStart(2, "0")}-${String(ev.start.getDate()).padStart(2, "0")}`
-    if (!map.has(key)) map.set(key, new Set())
-    map.get(key)!.add(ev.subscription.plan_type)
+  const isSelected = isSameDay(value, selectedDate)
+  const isCurrentDay = isSameDay(value, new Date())
+  const key = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
+  const dots = dotMap.get(key)
+
+  // Check if this date is in the displayed month
+  const isOffRange = value.getMonth() !== currentMonth
+
+  const handleClick = () => {
+    const d = new Date(value)
+    d.setHours(0, 0, 0, 0)
+    onSelectDate(d)
   }
-  return map
+
+  return (
+    <div
+      className={cn(
+        "mobile-date-cell relative cursor-pointer select-none",
+        isOffRange && "mobile-date-cell--off-range"
+      )}
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Select ${format(value, "MMMM d, yyyy")}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          handleClick()
+        }
+      }}
+    >
+      {/* Background from react-big-calendar (today stripe, etc.) */}
+      {children}
+
+      {/* Date number + dots overlay */}
+      <div className="mobile-date-cell__content pointer-events-none">
+        <span
+          className={cn(
+            "mobile-date-cell__number",
+            isSelected && "mobile-date-cell__number--selected",
+            isCurrentDay && !isSelected && "mobile-date-cell__number--today"
+          )}
+        >
+          {value.getDate()}
+        </span>
+
+        {/* Dot indicators — static to prevent flickering on tap */}
+        {dots && dots.size > 0 && (
+          <div className="mobile-date-cell__dots">
+            {Array.from(dots).map((planType) => (
+              <span
+                key={planType}
+                className={cn("mobile-date-cell__dot", planTypeAccent[planType])}
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -214,71 +311,21 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
     if (!open) setAddDefaultDate(undefined)
   }, [])
 
-  // Custom DateCellWrapper — renders dots + selection highlight
-  const DateCellWrapper = useCallback(
-    ({ children, value }: DateCellWrapperProps) => {
-      const isSelected = isSameDay(value, selectedDate)
-      const isCurrentDay = isSameDay(value, new Date())
-      const key = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
-      const dots = dotMap.get(key)
+  const calendarComponents = useMemo(
+    () => ({
+      toolbar: MobileCalendarToolbar as React.ComponentType<ToolbarProps<SubscriptionEvent>>,
+      dateCellWrapper: DateCellWrapper,
+    }),
+    []
+  )
 
-      // Check if this date is in the displayed month
-      const isOffRange = value.getMonth() !== date.getMonth()
-
-      return (
-        <div
-          className={cn(
-            "mobile-date-cell",
-            isOffRange && "mobile-date-cell--off-range"
-          )}
-          onClick={() => {
-            const d = new Date(value)
-            d.setHours(0, 0, 0, 0)
-            setSelectedDate(d)
-          }}
-          role="button"
-          tabIndex={0}
-          aria-label={`Select ${format(value, "MMMM d, yyyy")}`}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              const d = new Date(value)
-              d.setHours(0, 0, 0, 0)
-              setSelectedDate(d)
-            }
-          }}
-        >
-          {/* Background from react-big-calendar (today stripe, etc.) */}
-          {children}
-
-          {/* Date number + dots overlay */}
-          <div className="mobile-date-cell__content">
-            <span
-              className={cn(
-                "mobile-date-cell__number",
-                isSelected && "mobile-date-cell__number--selected",
-                isCurrentDay && !isSelected && "mobile-date-cell__number--today"
-              )}
-            >
-              {value.getDate()}
-            </span>
-
-            {/* Dot indicators */}
-            {dots && dots.size > 0 && (
-              <div className="mobile-date-cell__dots">
-                {Array.from(dots).map((planType) => (
-                  <span
-                    key={planType}
-                    className={cn("mobile-date-cell__dot", planTypeAccent[planType])}
-                    aria-hidden="true"
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )
-    },
+  const selectionContextValue = useMemo<CalendarSelectionContextValue>(
+    () => ({
+      selectedDate,
+      onSelectDate: setSelectedDate,
+      dotMap,
+      currentMonth: date.getMonth(),
+    }),
     [selectedDate, dotMap, date]
   )
 
@@ -286,30 +333,38 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
     <div className="mobile-calendar flex h-full flex-col">
       {/* Month grid — compact, fills top portion */}
       <div className="mobile-calendar__grid shrink-0">
-        <ShadcnBigCalendar
-          localizer={localizer}
-          events={events}
-          selectable
-          date={date}
-          onNavigate={handleNavigate}
-          view={Views.MONTH}
-          views={[Views.MONTH]}
-          onSelectSlot={handleSelectSlot}
-          formats={mobileFormats}
-          components={{
-            toolbar: MobileCalendarToolbar as React.ComponentType<ToolbarProps<SubscriptionEvent>>,
-            dateCellWrapper: DateCellWrapper,
-          }}
-        />
+        <CalendarSelectionContext.Provider value={selectionContextValue}>
+          <ShadcnBigCalendar
+            localizer={localizer}
+            events={events}
+            selectable
+            date={date}
+            onNavigate={handleNavigate}
+            view={Views.MONTH}
+            views={[Views.MONTH]}
+            onSelectSlot={handleSelectSlot}
+            formats={mobileFormats}
+            components={calendarComponents}
+          />
+        </CalendarSelectionContext.Provider>
       </div>
 
       {/* Selected day events — scrollable list below */}
       <div className="mobile-calendar__events min-h-0 flex-1 overflow-y-auto border-t border-border">
         {/* Day header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-4 py-2">
-          <h2 className="text-sm font-heading font-medium leading-relaxed text-foreground md:text-base">
-            {format(selectedDate, "EEEE, MMMM d")}
-          </h2>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.h2
+              key={selectedDate.toISOString()}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="text-sm font-heading font-medium leading-relaxed text-foreground md:text-base"
+            >
+              {format(selectedDate, "EEEE, MMMM d")}
+            </motion.h2>
+          </AnimatePresence>
           <AddSubscriptionButton
             defaultDate={selectedDate}
             size="xs"
@@ -317,31 +372,48 @@ export function MobileCalendar({ subscriptions }: MobileCalendarProps) {
           />
         </div>
 
-        {selectedDayEvents.length === 0 ? (
-          <button
-            type="button"
-            onClick={handleAddOnDate}
-            className="flex w-full flex-col items-center justify-center gap-2 px-4 py-8 text-center transition-colors hover:bg-muted/50"
-          >
-            <p className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
-              No subscriptions due
-            </p>
-            <span className="text-xs font-medium leading-none text-primary md:text-xs lg:text-sm">
-              + Add subscription
-            </span>
-          </button>
-        ) : (
-          <ul className="flex flex-col gap-3 p-4">
-            {selectedDayEvents.map((ev) => (
-              <SubscriptionCard
-                key={ev.subscription.id}
-                sub={ev.subscription}
-                enableSwipe={false}
-                showActions={false}
-              />
-            ))}
-          </ul>
-        )}
+        <AnimatePresence mode="wait">
+          {selectedDayEvents.length === 0 ? (
+            <motion.button
+              key={`empty-${selectedDate.toISOString()}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              whileTap={{ scale: 0.98 }}
+              type="button"
+              onClick={handleAddOnDate}
+              className="flex w-full flex-col items-center justify-center gap-2 px-4 py-8 text-center transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <p className="text-xs font-normal leading-normal text-muted-foreground md:text-xs lg:text-sm">
+                No subscriptions due
+              </p>
+              <span className="text-xs font-medium leading-none text-primary md:text-xs lg:text-sm">
+                + Add subscription
+              </span>
+            </motion.button>
+          ) : (
+            <motion.ul
+              key={`events-${selectedDate.toISOString()}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="flex flex-col gap-3 p-4"
+            >
+              {selectedDayEvents.map((ev, index) => (
+                <SubscriptionCard
+                  key={ev.subscription.id}
+                  sub={ev.subscription}
+                  enableSwipe={false}
+                  showActions={false}
+                  index={index}
+                  animateEntry
+                />
+              ))}
+            </motion.ul>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Add form */}

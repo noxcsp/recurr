@@ -46,8 +46,10 @@ export default function OfflinePage() {
   }, [])
 
   useEffect(() => {
-    // Initial verification on mount
-    checkConnectivity()
+    // Initial verification on mount via timer to prevent set-state-in-effect
+    const timer = setTimeout(() => {
+      checkConnectivity()
+    }, 0)
 
     const handleOnline = () => {
       checkConnectivity()
@@ -60,6 +62,7 @@ export default function OfflinePage() {
     window.addEventListener('offline', handleOffline)
 
     return () => {
+      clearTimeout(timer)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }

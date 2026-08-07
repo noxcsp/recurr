@@ -10,23 +10,25 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 import type { Profile } from "@/types/profiles"
 import type { User } from "@supabase/supabase-js"
 
 interface NotificationSettingsProps {
   user?: User | null
   profile?: Profile | null
+  className?: string
 }
 
 const ADVANCE_REMINDER_OPTIONS = [
-  { label: "Day Of", value: 0 },
+  { label: "Off", value: 0 },
   { label: "3 Days Before", value: 3 },
   { label: "7 Days Before", value: 7 },
 ] as const
 
 const DEBOUNCE_DELAY_MS = 500
 
-export function NotificationSettings({ user, profile }: NotificationSettingsProps) {
+export function NotificationSettings({ user, profile, className }: NotificationSettingsProps) {
   const supabase = createClient()
   const [isProcessing, setIsProcessing] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
@@ -158,7 +160,7 @@ export function NotificationSettings({ user, profile }: NotificationSettingsProp
   const isPermissionDenied = permissionState === "denied"
 
   return (
-    <div className="flex flex-col gap-4 border-b border-border px-4 py-4 md:p-6">
+    <div className={cn("flex flex-col gap-4", className)}>
       <div className="flex flex-col gap-1">
         <h2 className="text-xs font-heading font-semibold uppercase tracking-wide leading-none text-muted-foreground md:text-xs lg:text-sm">
           Push & Alerts

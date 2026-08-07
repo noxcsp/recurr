@@ -1,5 +1,5 @@
 import { DashboardMetricsSkeleton } from "@/components/dashboard-metrics"
-import { OverdueSubscriptionsSkeleton } from "@/components/overdue-subscriptions"
+import { ActionRequiredListSkeleton } from "@/components/action-required-list"
 import { Skeleton } from "@/components/ui/skeleton"
 import { NAV_HEIGHT_PX } from "@/components/bottom-nav"
 
@@ -17,7 +17,7 @@ export default function HomeLoading() {
         {/* Main content area skeleton */}
         <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
           <DashboardMetricsSkeleton />
-          <OverdueSubscriptionsSkeleton />
+          <ActionRequiredListSkeleton />
         </main>
 
         {/* Bottom navbar skeleton */}
