@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "motion/react"
-import { User, Bell, LogOut, Loader2, ChevronRight } from "lucide-react"
+import { User, Bell, LogOut, Loader2, ChevronRight, X } from "lucide-react"
 import { NotificationPopover } from "@/components/notification-panel"
 import { Button } from "@/components/ui/button"
 import { ThemeSettings } from "@/components/theme-settings"
@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet"
 import { signout } from "@/app/auth/actions"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
@@ -89,7 +90,7 @@ export function TopNav({ onSelectTab }: TopNavProps) {
                 transition={{ type: "spring", stiffness: 450, damping: 25 }}
                 type="button"
                 aria-label="Open profile & settings menu"
-                className="relative flex size-8 shrink-0 items-center justify-center border border-border bg-foreground text-background font-heading font-bold text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                className="relative flex size-10 shrink-0 items-center justify-center border border-border bg-foreground text-background font-heading font-bold text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
               />
             }
           >
@@ -102,11 +103,25 @@ export function TopNav({ onSelectTab }: TopNavProps) {
 
           <SheetContent
             side="right"
-            showCloseButton={!isSigningOut}
-            className="flex flex-col h-dvh w-4/5 sm:max-w-xs p-0 bg-card border-l border-border pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]"
+            showCloseButton={false}
+            className="flex flex-col w-4/5 sm:max-w-xs p-0 bg-card border-l border-border"
           >
-            <SheetHeader className="border-b border-border px-4 pb-3">
+            <SheetHeader className="flex flex-row items-center justify-between border-b border-border px-4 py-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
               <SheetTitle className="font-heading text-lg font-bold">Settings</SheetTitle>
+              {!isSigningOut && (
+                <SheetClose
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Close settings"
+                    />
+                  }
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Close settings</span>
+                </SheetClose>
+              )}
             </SheetHeader>
 
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
