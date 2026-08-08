@@ -5,14 +5,18 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { loginSchema, signupSchema, resetPasswordSchema, type LoginFormValues, type SignupFormValues, type ResetPasswordFormValues } from '@/lib/validations/auth'
+import { loginSchema, signupSchema, resetPasswordSchema, updatePasswordSchema, type LoginFormValues, type SignupFormValues, type ResetPasswordFormValues, type UpdatePasswordFormValues } from '@/lib/validations/auth'
+
+async function getOrigin() {
+  const headersList = await headers()
+  const host = headersList.get('host') || 'localhost:3000'
+  const protocol = headersList.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https')
+  return `${protocol}://${host}`
+}
 
 export async function signinWithOAuth(provider: 'google') {
   const supabase = await createClient()
-  const headersList = await headers()
-  const host = headersList.get('host') || 'localhost:3000'
-  const protocol = headersList.get('x-forwarded-proto') || (process.env.NODE_ENV === 'development' ? 'https' : 'https')
-  const origin = `${protocol}://${host}`
+  const origin = await getOrigin()
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
@@ -48,7 +52,7 @@ export async function login(data: LoginFormValues) {
   redirect('/home')
 }
 
-export async function signup(data: SignupFormValues): Promise<{ error?: string; success?: boolean; message?: string } | void> {
+export async function signup(data: SignupFormValues): Promise<{ error?: string; success?: boolean; message?: string }> {
   const supabase = await createClient()
 
   const validated = signupSchema.safeParse(data)
@@ -56,10 +60,13 @@ export async function signup(data: SignupFormValues): Promise<{ error?: string; 
     return { error: 'Invalid input fields' }
   }
 
-  const { error } = await supabase.auth.signUp({
+  const origin = await getOrigin()
+
+  const { data: signUpData, error } = await supabase.auth.signUp({
     email: validated.data.email,
     password: validated.data.password,
     options: {
+      emailRedirectTo: `${origin}/auth/callback?next=/home`,
       data: {
         display_name: validated.data.display_name,
       },
@@ -70,10 +77,23 @@ export async function signup(data: SignupFormValues): Promise<{ error?: string; 
     return { error: error.message }
   }
 
+  // If user already exists, Supabase returns empty identities array without sending email
+  if (signUpData?.user && signUpData.user.identities?.length === 0) {
+    return { error: 'An account with this email address already exists. Please sign in.' }
+  }
+
+  // If Supabase project has "Confirm Email" disabled, session is granted immediately
+  if (signUpData?.session) {
+    revalidatePath('/', 'layout')
+    redirect('/home')
+  }
+
   await supabase.auth.signOut()
 
-  revalidatePath('/', 'layout')
-  redirect('/')
+  return {
+    success: true,
+    message: 'Verification link sent! Please check your email to confirm your account before signing in.',
+  }
 }
 
 export async function resetPassword(data: ResetPasswordFormValues) {
@@ -84,7 +104,11 @@ export async function resetPassword(data: ResetPasswordFormValues) {
     return { error: 'Invalid input fields' }
   }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(validated.data.email)
+  const origin = await getOrigin()
+
+  const { error } = await supabase.auth.resetPasswordForEmail(validated.data.email, {
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+  })
 
   if (error) {
     return { error: error.message }
@@ -92,6 +116,35 @@ export async function resetPassword(data: ResetPasswordFormValues) {
 
   return { success: true, message: 'Check your email for the password reset link.' }
 }
+
+
+export async function updatePassword(data: UpdatePasswordFormValues) {
+  const supabase = await createClient()
+
+  const validated = updatePasswordSchema.safeParse(data)
+  if (!validated.success) {
+    return { error: validated.error.issues[0]?.message || 'Invalid input fields' }
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: validated.data.password,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  try {
+    await supabase.auth.signOut()
+  } catch {
+    // Ignore signout error if session was invalidated upon password update
+  }
+
+  revalidatePath('/', 'layout')
+  return { success: true, message: 'Your password has been successfully updated.' }
+}
+
+
 
 export async function signout() {
   const supabase = await createClient()
