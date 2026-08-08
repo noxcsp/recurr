@@ -65,7 +65,7 @@ export function TopNav({ onSelectTab }: TopNavProps) {
       className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]"
     >
       <span className="font-heading text-lg font-bold tracking-tight text-foreground">
-        RECURR
+        PHASE
       </span>
 
       <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 /**
  * Utility functions for handling UTC calendar dates across forms and components.
- * Subscriptions in Recurr store dates as UTC midnight (YYYY-MM-DDT00:00:00.000Z).
+ * Subscriptions in Phase store dates as UTC midnight (YYYY-MM-DDT00:00:00.000Z).
  */
 
 /**

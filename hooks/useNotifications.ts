@@ -148,12 +148,12 @@ export function useNotifications() {
       }
     }
 
-    window.addEventListener("recurr-notification-received", handleNotifEvent)
+    window.addEventListener("phase-notification-received", handleNotifEvent)
     document.addEventListener("visibilitychange", handleVisibilityOrFocus)
     window.addEventListener("focus", handleVisibilityOrFocus)
 
     return () => {
-      window.removeEventListener("recurr-notification-received", handleNotifEvent)
+      window.removeEventListener("phase-notification-received", handleNotifEvent)
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus)
       window.removeEventListener("focus", handleVisibilityOrFocus)
     }

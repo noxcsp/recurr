@@ -98,7 +98,7 @@ export default function OfflinePage() {
 
           <p className="text-xs md:text-sm lg:text-base font-sans text-muted-foreground leading-relaxed">
             {isOnline
-              ? 'Your internet connection has been restored. Click below to continue using Recurr.'
+              ? 'Your internet connection has been restored. Click below to continue using Phase.'
               : 'You are currently offline. Please check your network connection and try again.'}
           </p>
         </div>

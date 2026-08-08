@@ -23,20 +23,22 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Recurr',
+  title: 'Phase',
   description: "A simple subscription tracker",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Recurr",
+    title: "Phase",
   },
   icons: {
     icon: [
-      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
     ],
+    shortcut: "/favicon.ico",
     apple: [
-      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
 }
