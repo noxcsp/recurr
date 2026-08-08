@@ -8,7 +8,7 @@ export default function AuthLayout({
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center text-center space-y-1">
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-heading font-bold leading-tight tracking-tight text-foreground select-none">
-            Recurr
+            Phase
           </h1>
         </div>
         {children}

@@ -23,12 +23,12 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Recurr',
+  title: 'Phase',
   description: "A simple subscription tracker",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Recurr",
+    title: "Phase",
   },
   icons: {
     icon: [

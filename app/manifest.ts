@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Recurr - Subscription Tracker',
-    short_name: 'Recurr',
+    name: 'Phase - Subscription Tracker',
+    short_name: 'Phase',
     description: 'A simple and modern subscription tracker',
     start_url: '/home',
     display: 'standalone',

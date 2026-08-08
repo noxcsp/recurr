@@ -32,7 +32,7 @@ export const usePushNotifications = () => {
 
       // Dispatch custom event to notify in-app notification panel to refetch
       window.dispatchEvent(
-        new CustomEvent("recurr-notification-received", { detail: payload })
+        new CustomEvent("phase-notification-received", { detail: payload })
       )
     })
 
@@ -49,7 +49,7 @@ export const usePushNotifications = () => {
         event.data?.type === "NOTIFICATION_CLICKED"
       ) {
         window.dispatchEvent(
-          new CustomEvent("recurr-notification-received", { detail: event.data?.payload })
+          new CustomEvent("phase-notification-received", { detail: event.data?.payload })
         )
       }
     }
