@@ -186,7 +186,6 @@ export function SubscriptionCard({
   const [isDeleting, startDeleteTransition] = useTransition()
 
   const stageCancellation = useSubscriptionStore((s) => s.stageCancellation)
-  const stageReactivation = useSubscriptionStore((s) => s.stageReactivation)
   const undoCancellation = useSubscriptionStore((s) => s.undoCancellation)
   const effectiveStatus = useSubscriptionStore((s) => s.getEffectiveStatus(sub))
   const isCancelled = effectiveStatus === "cancelled"
@@ -457,7 +456,7 @@ export function SubscriptionCard({
                     variant="outline"
                     size="xs"
                     className="w-full rounded-none py-3.5"
-                    onClick={() => stageReactivation(sub)}
+                    onClick={() => setEditDialogOpen(true)}
                   >
                     <RotateCcw className="size-3" data-icon="inline-start" />
                     Subscribe Again
