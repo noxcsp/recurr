@@ -53,7 +53,7 @@ export function SettingsTab() {
       setDeleteError(result.error)
       setIsDeletingAccount(false)
     } else if (result?.success) {
-      router.push("/success")
+      router.push("/success?type=delete-account")
     }
   }
 

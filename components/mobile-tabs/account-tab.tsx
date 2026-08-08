@@ -3,10 +3,10 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "motion/react"
-import { Loader2, Trash2, AlertTriangle, UserCheck, ShieldAlert, Copy, Check } from "lucide-react"
+import { Loader2, Trash2, AlertTriangle, UserCheck, ShieldAlert, Copy, Check, KeyRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
-import { deleteAccount } from "@/app/auth/actions"
+import { deleteAccount, resetPassword } from "@/app/auth/actions"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -25,17 +25,29 @@ export function AccountTab() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [copiedId, setCopiedId] = useState(false)
+  const [isResettingPassword, setIsResettingPassword] = useState(false)
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null)
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState<string | null>(null)
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const { clearFcmToken } = usePushNotifications()
 
-  const handleCopyId = async () => {
-    if (!user?.id) return
+  const handleResetPassword = async () => {
+    if (!user?.email) return
+    setIsResettingPassword(true)
+    setResetPasswordError(null)
+    setResetPasswordSuccess(null)
     try {
-      await navigator.clipboard.writeText(user.id)
-      setCopiedId(true)
-      setTimeout(() => setCopiedId(false), 2000)
-    } catch (e) {
-      console.error("Failed to copy ID:", e)
+      const result = await resetPassword({ email: user.email })
+      if (result?.error) {
+        setResetPasswordError(result.error)
+      } else if (result?.success) {
+        setResetPasswordSuccess(result.message || "Check your email for the password reset link.")
+      }
+    } catch (err: unknown) {
+      setResetPasswordError(err instanceof Error ? err.message : "Failed to send reset link.")
+    } finally {
+      setIsResettingPassword(false)
+      setIsResetDialogOpen(false)
     }
   }
 
@@ -53,7 +65,7 @@ export function AccountTab() {
       setDeleteError(result.error)
       setIsDeletingAccount(false)
     } else if (result?.success) {
-      router.push("/success")
+      router.push("/success?type=delete-account")
     }
   }
 
@@ -108,7 +120,98 @@ export function AccountTab() {
         </div>
       </motion.div>
 
+      {/* Security Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.08 }}
+        className="border border-border bg-card p-4 space-y-3"
+      >
+        <div className="flex items-center gap-2">
+          <KeyRound className="size-4 text-foreground" aria-hidden="true" />
+          <h2 className="text-xs font-heading font-semibold uppercase tracking-wider text-muted-foreground">
+            Security
+          </h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Request a password reset link sent to your registered email address.
+        </p>
+
+        {resetPasswordError && (
+          <div className="border border-destructive p-3 text-xs font-medium text-destructive">
+            {resetPasswordError}
+          </div>
+        )}
+
+        {resetPasswordSuccess && (
+          <div className="border border-primary p-3 text-xs font-medium text-primary">
+            {resetPasswordSuccess}
+          </div>
+        )}
+
+        <AlertDialog
+          open={isResetDialogOpen}
+          onOpenChange={(open) => {
+            if (isResettingPassword) return
+            setIsResetDialogOpen(open)
+          }}
+        >
+          <AlertDialogTrigger
+            render={
+              <Button
+                variant="outline"
+                disabled={isResettingPassword}
+                className="w-full text-sm font-medium rounded-none flex items-center justify-center gap-2"
+              />
+            }
+          >
+            {isResettingPassword ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Sending Link...
+              </>
+            ) : (
+              <>
+                <KeyRound className="size-4" aria-hidden="true" />
+                Reset Password
+              </>
+            )}
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-foreground">
+                <KeyRound className="size-5" aria-hidden="true" />
+                Reset Password
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to send a password reset link to <span className="font-mono text-foreground font-medium">{user.email}</span>?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isResettingPassword}>
+                Cancel
+              </AlertDialogCancel>
+              <Button
+                onClick={handleResetPassword}
+                disabled={isResettingPassword}
+                className="rounded-none"
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </motion.div>
+
       {/* Danger Zone */}
+
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
