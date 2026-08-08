@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { MobileLayout } from "@/components/mobile-layout"
 
 // Nav height in px — shared with AddFAB and loading skeleton so element clears the bar exactly
-export const NAV_HEIGHT_PX = 56
+export const NAV_HEIGHT_PX = 64
 
 export type Tab = "dashboard" | "calendar" | "subscriptions" | "account" | "notifications"
 
@@ -75,19 +75,19 @@ function NavTab({ id, label, icon, active, onClick }: NavTabProps) {
       onClick={onClick}
       className={cn(
         "group relative flex h-full flex-col items-center justify-center gap-1 z-10",
-        "text-[9px] uppercase tracking-[0.12em] leading-none",
+        "text-[10px] uppercase tracking-[0.1em] leading-none",
         "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         active
           ? "text-foreground font-bold"
           : "text-muted-foreground font-medium hover:text-foreground"
       )}
     >
-      {/* Active tab sliding background highlight pill */}
+      {/* Top Active Monoline Indicator Line */}
       {active && (
         <motion.div
-          layoutId="bottom-nav-active-pill"
-          className="absolute inset-x-2 inset-y-1.5 rounded-sm bg-muted/60"
-          transition={{ type: "spring", stiffness: 450, damping: 32 }}
+          layoutId="active-tab-line"
+          className="absolute top-0 inset-x-0 h-0.5 bg-foreground z-20"
+          transition={{ type: "spring", stiffness: 500, damping: 35 }}
         />
       )}
 

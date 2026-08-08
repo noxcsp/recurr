@@ -223,7 +223,7 @@ export function NotificationPopover({ disabled = false }: NotificationPopoverPro
             size="icon"
             disabled={disabled}
             aria-label="Open notifications"
-            className="relative h-9 w-9 border border-border bg-background hover:bg-muted rounded-none shadow-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none"
+            className="relative h-10 w-10 border border-border bg-background hover:bg-muted rounded-none shadow-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none"
           />
         }
       >

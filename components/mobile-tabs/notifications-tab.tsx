@@ -18,7 +18,7 @@ export function NotificationsTab() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border pb-3">
         <h1 className="text-xl font-heading font-semibold leading-tight md:text-2xl lg:text-3xl flex items-center gap-2">
-          <Bell className="size-5 text-foreground" aria-hidden="true" />
+          <Bell className="size-5 md:size-6 text-foreground" aria-hidden="true" />
           Notification Settings
         </h1>
       </div>

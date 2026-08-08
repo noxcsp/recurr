@@ -146,7 +146,10 @@ export function EditSubscriptionForm({
           ? parseUtcToLocalDate(subscription.trial_end_date)
           : undefined,
         selectedTrialDurationId: subscription.is_trial ? "custom" : "none",
-        subscription_status: subscription.subscription_status,
+        subscription_status:
+          subscription.subscription_status === "cancelled"
+            ? "unpaid"
+            : subscription.subscription_status,
         isStartedToday: false,
       })
       setCurrentStep(2) // Directly start on step 2: Plan

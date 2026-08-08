@@ -97,13 +97,11 @@ export function AccountTab() {
           <span className="font-semibold text-muted-foreground">Email:</span>
           <span className="truncate font-mono text-xs">{user.email}</span>
 
-          <span className="font-semibold text-muted-foreground">User ID:</span>
-
           <span className="font-semibold text-muted-foreground">Timezone:</span>
           <span>{profile?.timezone || "Not set"}</span>
 
           <span className="font-semibold text-muted-foreground">Last Sign In:</span>
-          <span className="text-xs">
+          <span className="font-mono text-xs">
             {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : "N/A"}
           </span>
 
