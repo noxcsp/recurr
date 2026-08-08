@@ -88,8 +88,6 @@ export async function signup(data: SignupFormValues): Promise<{ error?: string; 
     redirect('/home')
   }
 
-  await supabase.auth.signOut()
-
   return {
     success: true,
     message: 'Verification link sent! Please check your email to confirm your account before signing in.',
