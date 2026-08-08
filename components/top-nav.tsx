@@ -96,7 +96,7 @@ export function TopNav({ onSelectTab }: TopNavProps) {
           >
             <span>{avatarInitial}</span>
             <span
-              className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border border-background bg-emerald-500"
+              className="absolute -top-0.5 -right-0.5 size-2.5 rounded-none border border-background bg-emerald-500"
               aria-hidden="true"
             />
           </SheetTrigger>

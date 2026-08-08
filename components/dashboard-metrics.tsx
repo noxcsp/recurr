@@ -105,7 +105,7 @@ export function DashboardMetrics({
           <CardDescription className="text-xs font-sans font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
             Monthly Spend
           </CardDescription>
-          <CardTitle className="text-4xl font-sans tracking-tight text-foreground md:text-5xl lg:text-6xl">
+          <CardTitle className="text-4xl font-sans tabular-nums tracking-tight text-foreground md:text-5xl lg:text-6xl">
             {formattedMonthlySpend}
           </CardTitle>
         </CardHeader>
@@ -142,7 +142,7 @@ export function DashboardMetrics({
             <CardDescription className="text-xs font-sans font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
               Active Subs
             </CardDescription>
-            <CardTitle className="text-3xl font-sans text-success md:text-4xl lg:text-5xl">
+            <CardTitle className="text-3xl font-sans tabular-nums text-success md:text-4xl lg:text-5xl">
               {activeSubscriptionsCount}
             </CardTitle>
           </CardHeader>
@@ -154,7 +154,7 @@ export function DashboardMetrics({
             <CardDescription className="text-xs font-sans font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
               Due This Week
             </CardDescription>
-            <CardTitle className="text-3xl font-sans text-warning md:text-4xl lg:text-5xl">
+            <CardTitle className="text-3xl font-sans tabular-nums text-warning md:text-4xl lg:text-5xl">
               {dueThisWeekCount}
             </CardTitle>
           </CardHeader>
@@ -167,12 +167,12 @@ export function DashboardMetrics({
           <CardDescription className="text-xs font-sans font-semibold uppercase tracking-wider text-muted-foreground md:text-xs lg:text-sm">
             Top Monthly Subscription
           </CardDescription>
-          <CardTitle className="text-3xl font-heading font-semibold text-primary md:text-4xl lg:text-5xl">
+          <CardTitle className="text-3xl font-heading font-semibold text-foreground md:text-4xl lg:text-5xl">
             {topSubscriptionName}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <p className="text-base font-medium text-foreground md:text-lg lg:text-xl">
+          <p className="text-base font-sans tabular-nums font-medium text-foreground md:text-lg lg:text-xl">
             {formattedTopCost}
           </p>
           <p className="text-xs font-normal text-muted-foreground md:text-xs lg:text-sm">

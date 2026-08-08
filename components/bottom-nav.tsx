@@ -75,13 +75,22 @@ function NavTab({ id, label, icon, active, onClick }: NavTabProps) {
       onClick={onClick}
       className={cn(
         "group relative flex h-full flex-col items-center justify-center gap-1 z-10",
-        "text-[9px] uppercase tracking-[0.12em] leading-none",
+        "text-[10px] uppercase tracking-[0.1em] leading-none",
         "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         active
           ? "text-foreground font-bold"
           : "text-muted-foreground font-medium hover:text-foreground"
       )}
     >
+      {/* Top Active Monoline Indicator Line */}
+      {active && (
+        <motion.div
+          layoutId="active-tab-line"
+          className="absolute top-0 inset-x-0 h-0.5 bg-foreground z-20"
+          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        />
+      )}
+
       {/* Icon with animated spring scale & weight emphasis */}
       <motion.span
         animate={{ scale: active ? 1.1 : 1 }}
